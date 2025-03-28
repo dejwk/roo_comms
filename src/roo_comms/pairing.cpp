@@ -2,6 +2,21 @@
 
 namespace roo_comms {
 
+static constexpr roo_io::byte kControlMagic[8] = {
+    roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
+    roo_io::byte{0},    roo_io::byte{0xE1}, roo_io::byte{0xB2},
+    roo_io::byte{0x88}, roo_io::byte{0x99}};
+
+namespace {
+
+struct SerializedControlMessage {
+  pb_byte_t data[8 + roo_comms_ControlMessage_size];
+  size_t size;
+};
+
+SerializedControlMessage SerializeControlMessage(
+    const roo_comms_ControlMessage& msg, const Magic& magic);
+
 SerializedControlMessage SerializeControlMessage(
     const roo_comms_ControlMessage& msg, const Magic& magic) {
   SerializedControlMessage result;
@@ -16,6 +31,23 @@ SerializedControlMessage SerializeControlMessage(
     result.size = 0;
   }
   return result;
+}
+
+}  // namespace
+
+bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
+                                roo_comms_ControlMessage& msg) {
+  if (memcmp(incoming_data, kControlMagic, 8) != 0) {
+    return false;
+  }
+  msg = roo_comms_ControlMessage_init_zero;
+  pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
+  bool status = pb_decode(&stream, roo_comms_ControlMessage_fields, &msg);
+  if (!status) {
+    LOG(ERROR) << "Received a malformed message " << PB_GET_ERROR(&stream);
+    return false;
+  }
+  return true;
 }
 
 void SendDiscoveryRequest(EspNowTransport& transport,

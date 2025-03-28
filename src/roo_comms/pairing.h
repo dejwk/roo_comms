@@ -4,18 +4,8 @@
 
 namespace roo_comms {
 
-static constexpr roo_io::byte kControlMagic[8] = {
-    roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
-    roo_io::byte{0},    roo_io::byte{0xE1}, roo_io::byte{0xB2},
-    roo_io::byte{0x88}, roo_io::byte{0x99}};
-
-struct SerializedControlMessage {
-  pb_byte_t data[8 + roo_comms_ControlMessage_size];
-  size_t size;
-};
-
-SerializedControlMessage SerializeControlMessage(
-    const roo_comms_ControlMessage& msg, const Magic& magic);
+bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
+                                roo_comms_ControlMessage& msg);
 
 // Sends a broadcast discovery request.
 void SendDiscoveryRequest(EspNowTransport& transport,

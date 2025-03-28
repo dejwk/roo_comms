@@ -91,8 +91,7 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
          PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
       transport_(transport),
-      receiver_(roo_comms::kControlMagic, roo_comms::kDataMagicHomeAutomation,
-                scheduler,
+      receiver_(roo_comms::kDataMagicHomeAutomation, scheduler,
                 [this](roo_comms::ReceivedMessage received) {
                   processMessage(std::move(received));
                 }),

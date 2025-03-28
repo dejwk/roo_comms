@@ -17,14 +17,13 @@
 
 namespace roo_comms {
 
+bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
+                                roo_comms_ControlMessage& msg);
+
 class EspNowPeer;
 
 class EspNowTransport {
  public:
-  // using ReceiverFn = std::function<void(const roo_io::MacAddress&,
-  //                                       const uint8_t* incoming_data,
-  //                                       size_t len)>;
-
   EspNowTransport() : channel_(0) {}
 
   uint8_t channel() const { return channel_; }
@@ -97,7 +96,6 @@ static constexpr roo_io::byte kDataMagicHomeAutomation[8] = {
     roo_io::byte{0},    roo_io::byte{0x5E}, roo_io::byte{0x0C},
     roo_io::byte{0x15}, roo_io::byte{0x03}};
 
-
 struct SerializedDataMessage {
   pb_byte_t data[8 + roo_comms_DataMessage_size];
   size_t size;
@@ -119,14 +117,12 @@ class Receiver {
  public:
   using ProcessorFn = std::function<void(const ReceivedMessage&)>;
 
-  Receiver(const Magic& control_magic, const Magic& data_magic,
-           roo_scheduler::Scheduler& scheduler, ProcessorFn processor_fn)
+  Receiver(const Magic& data_magic, roo_scheduler::Scheduler& scheduler,
+           ProcessorFn processor_fn)
       : queue_([this]() { processor_.scheduleNow(); }),
         processor_fn_(std::move(processor_fn)),
         processor_(scheduler, [this]() { processMessages(); }),
-        control_magic_{},
         data_magic_{} {
-    memcpy(control_magic_, control_magic, 8);
     memcpy(data_magic_, data_magic, 8);
   }
 
@@ -136,18 +132,16 @@ class Receiver {
       LOG(WARNING) << "Received bogus message (too short); ignoring";
       return;
     }
-    if (memcmp(incoming_data, control_magic_, 8) == 0) {
-      roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-      pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
-      bool status = pb_decode(&stream, roo_comms_ControlMessage_fields, &msg);
-      if (!status) {
-        LOG(ERROR) << "Received a malformed message " << PB_GET_ERROR(&stream);
+    {
+      roo_comms_ControlMessage msg;
+      if (TryParsingAsControlMessage(incoming_data, len, msg)) {
+        queue_.push(ReceivedMessage{.source = roo_io::MacAddress(mac_addr),
+                                    .type = ReceivedMessage::kControl,
+                                    .control_msg = std::move(msg)});
         return;
       }
-      queue_.push(ReceivedMessage{.source = roo_io::MacAddress(mac_addr),
-                                  .type = ReceivedMessage::kControl,
-                                  .control_msg = std::move(msg)});
-    } else if (memcmp(incoming_data, data_magic_, 8) == 0) {
+    }
+    if (memcmp(incoming_data, data_magic_, 8) == 0) {
       roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
       pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
       bool status = pb_decode(&stream, roo_comms_DataMessage_fields, &msg);
@@ -175,7 +169,6 @@ class Receiver {
   MessageQueue<ReceivedMessage> queue_;
   ProcessorFn processor_fn_;
   roo_scheduler::SingletonTask processor_;
-  Magic control_magic_;
   Magic data_magic_;
 };
 

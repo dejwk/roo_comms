@@ -74,8 +74,7 @@ PairableDevice::PairableDevice(
                   LOG(INFO) << "Unpairing";
                   setState(kNotPaired);
                 }),
-      receiver_(roo_comms::kControlMagic, roo_comms::kDataMagicHomeAutomation,
-                scheduler,
+      receiver_(roo_comms::kDataMagicHomeAutomation, scheduler,
                 [this](const roo_comms::ReceivedMessage& msg) {
                   processMessage(msg);
                 }),
