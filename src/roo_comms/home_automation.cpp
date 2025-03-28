@@ -1,0 +1,42 @@
+#include "roo_comms/home_automation.h"
+
+namespace roo_comms {
+
+// Payload identifier for 'home automation' device universe, using
+// roo_comms_DataMessage payload.
+static constexpr roo_io::byte kDataMagicHomeAutomation[8] = {
+    roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
+    roo_io::byte{0},    roo_io::byte{0x5E}, roo_io::byte{0x0C},
+    roo_io::byte{0x15}, roo_io::byte{0x03}};
+
+bool TryParsingAsHomeAutomationDataMessage(const uint8_t* incoming_data,
+                                           size_t len,
+                                           roo_comms_DataMessage& msg) {
+  if (memcmp(incoming_data, kDataMagicHomeAutomation, 8) != 0) return false;
+  msg = roo_comms_DataMessage_init_zero;
+  pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
+  bool status = pb_decode(&stream, roo_comms_DataMessage_fields, &msg);
+  if (!status) {
+    LOG(ERROR) << "Received a malformed message " << PB_GET_ERROR(&stream);
+    return false;
+  }
+  return true;
+}
+
+SerializedHomeAutomationDataMessage SerializeHomeAutomationDataMessage(
+    const roo_comms_DataMessage& msg) {
+  SerializedHomeAutomationDataMessage result;
+  memcpy(result.data, kDataMagicHomeAutomation, 8);
+  pb_ostream_t stream =
+      pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
+  bool status = pb_encode(&stream, roo_comms_DataMessage_fields, &msg);
+  if (status) {
+    result.size = stream.bytes_written;
+  } else {
+    LOG(ERROR) << "Encoding failed: " << PB_GET_ERROR(&stream);
+    result.size = 0;
+  }
+  return result;
+}
+
+}  // namespace roo_comms

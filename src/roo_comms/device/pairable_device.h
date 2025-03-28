@@ -70,7 +70,8 @@ class PairableDevice {
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
-      std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv);
+      std::function<void(const roo_comms::Receiver::Message&)>
+          on_app_data_recv);
 
   void begin(bool wakeup);
 
@@ -92,7 +93,7 @@ class PairableDevice {
 
   void sendPairingRequestMessage();
 
-  void processMessage(roo_comms::ReceivedMessage msg);
+  void processMessage(const roo_comms::Receiver::Message& msg);
 
   void cycleChannelAndBroadcast();
 
@@ -110,7 +111,7 @@ class PairableDevice {
   StateSignaler& signaler_;
 
   std::function<void(State prev_state, State new_state)> on_state_changed_;
-  std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv_;
+  std::function<void(const roo_comms::Receiver::Message&)> on_app_data_recv_;
 
   roo_prefs::Uint64 peer_id_;
   roo_prefs::Uint8 peer_channel_;

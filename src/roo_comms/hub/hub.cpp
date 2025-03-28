@@ -17,8 +17,7 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
 void SendHomeAutomationDataMessage(EspNowTransport &transport,
                                    const roo_io::MacAddress &destination,
                                    const roo_comms_DataMessage &msg) {
-  auto serialized =
-      SerializeDataMessage(msg, roo_comms::kDataMagicHomeAutomation);
+  auto serialized = SerializeHomeAutomationDataMessage(msg);
   transport.sendOnceAsync(destination, serialized.data, serialized.size);
 }
 
@@ -49,22 +48,22 @@ bool Hub::checkSupportedType(pb_size_t which_kind) {
   return true;
 }
 
-void Hub::processMessage(roo_comms::ReceivedMessage received) {
-  LOG(INFO) << "Processing discovery request from " << received.source;
-  switch (received.type) {
-    case roo_comms::ReceivedMessage::kControl: {
-      switch (received.control_msg.which_contents) {
+void Hub::processMessage(const roo_comms::Receiver::Message &received) {
+  {
+    roo_comms_ControlMessage msg;
+    if (TryParsingAsControlMessage(received.data.get(), received.size, msg)) {
+      switch (msg.which_contents) {
         case roo_comms_ControlMessage_hub_discovery_request_tag: {
-          processDiscoveryRequest(received.source,
-                                  received.control_msg.contents
-                                      .hub_discovery_request.device_descriptor);
+          processDiscoveryRequest(
+              received.source,
+              msg.contents.hub_discovery_request.device_descriptor);
           break;
         }
         case roo_comms_ControlMessage_hub_pairing_request_tag: {
           LOG(INFO) << "Processing pairing request from " << received.source;
           processPairingRequest(
-              received.source, received.control_msg.contents.hub_pairing_request
-                                   .device_descriptor);
+              received.source,
+              msg.contents.hub_pairing_request.device_descriptor);
           break;
         }
         case roo_comms_ControlMessage_hub_discovery_response_tag:
@@ -72,18 +71,19 @@ void Hub::processMessage(roo_comms::ReceivedMessage received) {
           LOG(WARNING) << "Unexpected message type; ignoring.";
         }
       }
-      break;
+      return;
     }
-    case roo_comms::ReceivedMessage::kData: {
+  }
+  {
+    roo_comms_DataMessage msg;
+    if (TryParsingAsHomeAutomationDataMessage(received.data.get(),
+                                              received.size, msg)) {
       if (payload_cb_ != nullptr) {
-        payload_cb_(received.source, received.data_msg);
+        payload_cb_(received);
       }
-      break;
+      return;
     }
-    default: {
-      LOG(WARNING) << "Ignoring bogus message type " << received.type
-                   << " from " << received.source;
-    }
+    LOG(WARNING) << "Ignoring bogus message";
   }
 }
 
@@ -91,10 +91,12 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
          PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
       transport_(transport),
-      receiver_(roo_comms::kDataMagicHomeAutomation, scheduler,
-                [this](roo_comms::ReceivedMessage received) {
-                  processMessage(std::move(received));
-                }),
+      receiver_(
+          scheduler,
+          [this](const roo_comms::Receiver::Message &received) {
+            processMessage(received);
+          },
+          100, 8, 256, nullptr),
       payload_cb_(payload_cb),
       transceiver_changed_cb_(transceiver_changed_cb) {}
 
@@ -245,20 +247,20 @@ TransceiverHub::TransceiverHub(EspNowTransport &transport,
                                roo_scheduler::Scheduler &scheduler)
     : hub_(
           transport, scheduler,
-          [this](const roo_io::MacAddress &addr,
-                 const roo_comms_DataMessage &msg) {
-            processDataMessage(addr, msg);
-          },
+          [this](const Receiver::Message &msg) { processDataMessage(msg); },
           [this]() { notifyTransceiversChanged(); }) {}
 
-void TransceiverHub::processDataMessage(const roo_io::MacAddress &src,
-                                        const roo_comms_DataMessage &msg) {
+void TransceiverHub::processDataMessage(const Receiver::Message &msg) {
   // Cache the payload so that we can report values from it when asked.
   // For now, all devices send their full state in a single message, so no
   // merging is necessary.
-  DeviceState &state = states_[src];
+  DeviceState &state = states_[msg.source];
   state.last_reading = roo_time::Uptime::Now();
-  state.last_payload = msg;
+  if (!TryParsingAsHomeAutomationDataMessage(msg.data.get(), msg.size,
+                                             state.last_payload)) {
+    LOG(WARNING) << "Failed to parse data message";
+    return;
+  }
 
   notifyNewReadingsAvailable();
 }

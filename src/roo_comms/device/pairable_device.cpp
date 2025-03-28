@@ -58,7 +58,7 @@ PairableDevice::PairableDevice(
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
-    std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv)
+    std::function<void(const roo_comms::Receiver::Message&)> on_app_data_recv)
     : transport_(transport),
       device_descriptor_(device_descriptor),
       prefs_(prefs),
@@ -74,10 +74,12 @@ PairableDevice::PairableDevice(
                   LOG(INFO) << "Unpairing";
                   setState(kNotPaired);
                 }),
-      receiver_(roo_comms::kDataMagicHomeAutomation, scheduler,
-                [this](const roo_comms::ReceivedMessage& msg) {
-                  processMessage(msg);
-                }),
+      receiver_(
+          scheduler,
+          [this](const roo_comms::Receiver::Message& msg) {
+            processMessage(msg);
+          },
+          100, 8, 256, nullptr),
       state_(kStartup),
       button_(button, scheduler, [this]() { setState(kPairing); }) {}
 
@@ -179,17 +181,17 @@ void PairableDevice::sendPairingRequestMessage() {
   SendPairingRequest(*peer_, *device_descriptor_);
 }
 
-void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
-  switch (msg.type) {
-    case roo_comms::ReceivedMessage::kControl: {
-      switch (msg.control_msg.which_contents) {
+void PairableDevice::processMessage(const roo_comms::Receiver::Message& msg) {
+  {
+    roo_comms_ControlMessage control_msg;
+    if (TryParsingAsControlMessage(msg.data.get(), msg.size, control_msg)) {
+      switch (control_msg.which_contents) {
         case roo_comms_ControlMessage_hub_discovery_response_tag: {
           if (state_ != kPairing) {
             LOG(ERROR) << "Received pairing invitation, but we're not asking.";
             break;
           }
-          int channel =
-              msg.control_msg.contents.hub_discovery_response.hub_channel;
+          int channel = control_msg.contents.hub_discovery_response.hub_channel;
           LOG(INFO) << "Received broadcast announce response with channel "
                     << channel;
           transport_.setChannel(channel);
@@ -216,22 +218,12 @@ void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
           return;
         } break;
       }
-    }
-    case roo_comms::ReceivedMessage::kData: {
-      // Hand off to the application layer.
-      if (on_app_data_recv_ != nullptr) {
-        on_app_data_recv_(msg);
-      } else {
-        LOG(WARNING)
-            << "Ignoring unexpected application-level message received from "
-            << msg.source.asString();
-      }
-    }
-    default: {
-      LOG(WARNING) << "Ignoring unexpected message type received from "
-                   << msg.source.asString();
       return;
     }
+  }
+  // Hand off all other messages to the application layer.
+  if (on_app_data_recv_ != nullptr) {
+    on_app_data_recv_(msg);
   }
 }
 

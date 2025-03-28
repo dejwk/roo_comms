@@ -2,9 +2,10 @@
 
 #include <vector>
 
+#include "esp_now_transport.h"
 #include "roo_backport.h"
 #include "roo_collections/flat_small_hash_map.h"
-#include "esp_now_transport.h"
+#include "roo_comms/home_automation.h"
 #include "roo_comms/pairing.h"
 #include "roo_io/net/mac_address.h"
 #include "roo_prefs.h"
@@ -14,8 +15,7 @@ namespace roo_comms {
 
 class Hub {
  public:
-  using PayloadCb = std::function<void(const roo_io::MacAddress &,
-                                       const roo_comms_DataMessage &)>;
+  using PayloadCb = std::function<void(const roo_comms::Receiver::Message &)>;
   using TransceiverChangedCb = std::function<void()>;
 
   Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
@@ -41,7 +41,7 @@ class Hub {
  private:
   friend class TransceiverHub;
 
-  void processMessage(roo_comms::ReceivedMessage received);
+  void processMessage(const roo_comms::Receiver::Message& received);
 
   void processDiscoveryRequest(const roo_io::MacAddress &origin,
                                const roo_comms_DeviceDescriptor &descriptor);
@@ -119,8 +119,7 @@ class TransceiverHub : public roo_transceivers::Universe {
  private:
   roo_transceivers::DeviceLocator device(size_t device_idx) const;
 
-  void processDataMessage(const roo_io::MacAddress &src,
-                          const roo_comms_DataMessage &msg);
+  void processDataMessage(const Receiver::Message &msg);
 
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();

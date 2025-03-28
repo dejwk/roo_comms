@@ -15,12 +15,9 @@ struct SerializedControlMessage {
 };
 
 SerializedControlMessage SerializeControlMessage(
-    const roo_comms_ControlMessage& msg, const Magic& magic);
-
-SerializedControlMessage SerializeControlMessage(
-    const roo_comms_ControlMessage& msg, const Magic& magic) {
+    const roo_comms_ControlMessage& msg) {
   SerializedControlMessage result;
-  memcpy(result.data, magic, 8);
+  memcpy(result.data, kControlMagic, 8);
   pb_ostream_t stream =
       pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
   bool status = pb_encode(&stream, roo_comms_ControlMessage_fields, &msg);
@@ -57,7 +54,7 @@ void SendDiscoveryRequest(EspNowTransport& transport,
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_discovery_request.device_descriptor = descriptor;
 
-  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
+  auto serialized = SerializeControlMessage(msg);
   transport.broadcastAsync(serialized.data, serialized.size);
 }
 
@@ -67,7 +64,7 @@ void SendDiscoveryResponse(EspNowTransport& transport,
   msg.which_contents = roo_comms_ControlMessage_hub_discovery_response_tag;
   msg.contents.hub_discovery_response.hub_channel = transport.channel();
 
-  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
+  auto serialized = SerializeControlMessage(msg);
   transport.sendOnceAsync(origin, serialized.data, serialized.size);
 }
 
@@ -78,7 +75,7 @@ void SendPairingResponse(EspNowTransport& transport,
   msg.which_contents = roo_comms_ControlMessage_hub_pairing_response_tag;
   msg.contents.hub_pairing_response.status =
       roo_comms_ControlMessage_HubPairingResponse_Status_kOk;
-  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
+  auto serialized = SerializeControlMessage(msg);
   transport.sendOnceAsync(origin, serialized.data, serialized.size);
 }
 
@@ -89,7 +86,7 @@ void SendPairingRequest(EspNowPeer& peer,
   msg.which_contents = roo_comms_ControlMessage_hub_pairing_request_tag;
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_pairing_request.device_descriptor = descriptor;
-  auto result = SerializeControlMessage(msg, roo_comms::kControlMagic);
+  auto result = SerializeControlMessage(msg);
   peer.sendAsync(result.data, result.size);
 }
 

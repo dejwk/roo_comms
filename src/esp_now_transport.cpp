@@ -94,20 +94,4 @@ void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
   };
 }
 
-SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
-                                           const Magic& magic) {
-  SerializedDataMessage result;
-  memcpy(result.data, magic, 8);
-  pb_ostream_t stream =
-      pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
-  bool status = pb_encode(&stream, roo_comms_DataMessage_fields, &msg);
-  if (status) {
-    result.size = stream.bytes_written;
-  } else {
-    LOG(ERROR) << "Encoding failed: " << PB_GET_ERROR(&stream);
-    result.size = 0;
-  }
-  return result;
-}
-
 }  // namespace roo_comms

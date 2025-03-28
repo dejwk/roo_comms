@@ -37,6 +37,8 @@ class MessageQueue {
     return true;
   }
 
+  size_t size() const { return queue_.size(); }
+
  private:
   mutable std::mutex mutex_;
   std::queue<Message> queue_;
