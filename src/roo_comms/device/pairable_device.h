@@ -4,6 +4,7 @@
 #include <inttypes.h>
 
 #include <functional>
+#include <memory>
 
 #include "esp_err.h"
 // #include "esp_now.h"
@@ -68,8 +69,7 @@ class PairableDevice {
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
-      std::function<void(const roo_io::MacAddress&, esp_now_send_status_t)>
-          on_app_data_sent,
+      std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent,
       std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv);
 
   void begin(bool wakeup);
@@ -78,9 +78,9 @@ class PairableDevice {
 
   bool isPaired() const { return state() == kPaired; }
 
-  const esp_now_peer_info_t& peer() const { return peer_; }
+  const EspNowPeer* peer() const { return peer_.get(); }
 
-  void onDataSent(const uint8_t* mac_addr, esp_now_send_status_t status);
+  void onDataSent(const uint8_t* mac_addr, bool success);
 
   void onDataRecv(const uint8_t* source_mac_addr, const uint8_t* incomingData,
                   int len);
@@ -110,13 +110,12 @@ class PairableDevice {
   StateSignaler& signaler_;
 
   std::function<void(State prev_state, State new_state)> on_state_changed_;
-  std::function<void(const roo_io::MacAddress&, esp_now_send_status_t)>
-      on_app_data_sent_;
+  std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent_;
   std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv_;
 
   roo_prefs::Uint64 peer_id_;
   roo_prefs::Uint8 peer_channel_;
-  esp_now_peer_info_t peer_;
+  std::unique_ptr<EspNowPeer> peer_;
 
   roo_scheduler::SingletonTask broadcaster_;
   roo_scheduler::SingletonTask pairing_canceler_;
@@ -124,7 +123,7 @@ class PairableDevice {
 
   roo_comms::Receiver receiver_;
 
-  uint8_t station_channel_;
+  EspNowTransport transport_;
   State state_;
 
   Button button_;

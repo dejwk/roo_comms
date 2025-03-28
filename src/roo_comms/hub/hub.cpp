@@ -15,33 +15,18 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
     roo_transceivers::DeviceSchema("esp-now");
 
 // The hub doesn't remember all its peers and it rarely responds to them.
-void SendControlMessage(int channel, const roo_io::MacAddress &destination,
+void SendControlMessage(const EspNowTransport &transport,
+                        const roo_io::MacAddress &destination,
                         const roo_comms_ControlMessage &msg) {
   auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
-
-  esp_now_peer_info_t peer = {};
-  destination.writeTo(peer.peer_addr);
-  peer.channel = channel;
-  peer.encrypt = 0;
-
-  ESP_ERROR_CHECK(esp_now_add_peer(&peer));
-  // event_log.appendLine(roo_io::StringPrintf("Sending response"));
-  SendEspNowMessage(peer, serialized.data, serialized.size);
-  ESP_ERROR_CHECK(esp_now_del_peer(peer.peer_addr));
+  transport.sendOnce(destination, serialized.data, serialized.size);
 }
 
-void SendDataMessage(int channel, const roo_io::MacAddress &destination,
+void SendDataMessage(const EspNowTransport &transport,
+                     const roo_io::MacAddress &destination,
                      const roo_comms_DataMessage &msg) {
   auto serialized = SerializeDataMessage(msg, roo_comms::kMagicDataMsg);
-  esp_now_peer_info_t peer = {};
-  destination.writeTo(peer.peer_addr);
-  peer.channel = channel;
-  peer.encrypt = 0;
-
-  ESP_ERROR_CHECK(esp_now_add_peer(&peer));
-  // event_log.appendLine(roo_io::StringPrintf("Sending response"));
-  SendEspNowMessage(peer, serialized.data, serialized.size);
-  ESP_ERROR_CHECK(esp_now_del_peer(peer.peer_addr));
+  transport.sendOnce(destination, serialized.data, serialized.size);
 }
 
 void Hub::processDiscoveryRequest(
@@ -50,8 +35,9 @@ void Hub::processDiscoveryRequest(
   if (!checkSupportedType(descriptor.which_kind)) return;
   roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
   msg.which_contents = roo_comms_ControlMessage_hub_discovery_response_tag;
-  msg.contents.hub_discovery_response.hub_channel = channel_;
-  SendControlMessage(channel_, origin, msg);
+  msg.contents.hub_discovery_response.hub_channel = transport_.channel();
+
+  SendControlMessage(transport_, origin, msg);
 }
 
 void Hub::processPairingRequest(const roo_io::MacAddress &origin,
@@ -65,7 +51,7 @@ void Hub::processPairingRequest(const roo_io::MacAddress &origin,
   msg.which_contents = roo_comms_ControlMessage_hub_pairing_response_tag;
   msg.contents.hub_pairing_response.status =
       roo_comms_ControlMessage_HubPairingResponse_Status_kOk;
-  SendControlMessage(channel_, origin, msg);
+  SendControlMessage(transport_, origin, msg);
 }
 
 bool Hub::checkSupportedType(pb_size_t which_kind) {
@@ -119,7 +105,7 @@ void Hub::processMessage(roo_comms::ReceivedMessage received) {
 Hub::Hub(int channel, roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
          TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
-      channel_(channel),
+      transport_(channel),
       receiver_(roo_comms::kMagicControlMsg, roo_comms::kMagicDataMsg,
                 scheduler,
                 [this](roo_comms::ReceivedMessage received) {
@@ -424,7 +410,8 @@ roo_transceivers::Measurement ReadRelay(
   return roo_transceivers::Measurement();
 }
 
-bool WriteRelay(int channel, const roo_io::MacAddress &device,
+bool WriteRelay(const EspNowTransport &transport,
+                const roo_io::MacAddress &device,
                 const roo_transceivers::ActuatorId &actuator_id, float value) {
   if (value != 0.0f && value != 1.0f) return false;
   int d = extractRelayId(actuator_id.c_str());
@@ -433,17 +420,19 @@ bool WriteRelay(int channel, const roo_io::MacAddress &device,
     msg.which_contents = roo_comms_DataMessage_relay_request_tag;
     msg.contents.relay_request.mask = (1 << d);
     msg.contents.relay_request.write = value == 1.0f ? (1 << d) : 0;
-    SendDataMessage(channel, device, msg);
+    SendDataMessage(transport, device, msg);
     return true;
   }
+  return false;
 }
 
-void RequestRelayState(int channel, const roo_io::MacAddress &device) {
+void RequestRelayState(const EspNowTransport &transport,
+                       const roo_io::MacAddress &device) {
   roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
   msg.which_contents = roo_comms_DataMessage_relay_request_tag;
   msg.contents.relay_request.mask = 0;
   msg.contents.relay_request.write = 0;
-  SendDataMessage(channel, device, msg);
+  SendDataMessage(transport, device, msg);
 }
 
 }  // namespace
@@ -514,7 +503,7 @@ bool TransceiverHub::write(const roo_transceivers::ActuatorLocator &locator,
       return false;
     }
     case roo_comms_DeviceDescriptor_relay_tag: {
-      WriteRelay(hub_.channel(), addr, locator.actuator_id(), value);
+      WriteRelay(hub_.transport(), addr, locator.actuator_id(), value);
       return true;
     }
     default: {
@@ -533,7 +522,7 @@ void TransceiverHub::requestUpdate() {
     if (descriptor == nullptr) continue;
     switch (descriptor->which_kind) {
       case roo_comms_DeviceDescriptor_relay_tag: {
-        RequestRelayState(hub_.channel(), addr);
+        RequestRelayState(hub_.transport(), addr);
         break;
       }
       default: {

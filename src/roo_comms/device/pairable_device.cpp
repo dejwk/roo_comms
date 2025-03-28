@@ -57,8 +57,7 @@ PairableDevice::PairableDevice(
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
-    std::function<void(const roo_io::MacAddress&, esp_now_send_status_t)>
-        on_app_data_sent,
+    std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent,
     std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv)
     : device_descriptor_(device_descriptor),
       prefs_(prefs),
@@ -80,7 +79,7 @@ PairableDevice::PairableDevice(
                 [this](const roo_comms::ReceivedMessage& msg) {
                   processMessage(msg);
                 }),
-      station_channel_(1),
+      transport_(1),
       state_(kStartup),
       button_(button, scheduler, [this]() { setState(kPairing); }) {}
 
@@ -93,9 +92,9 @@ void PairableDevice::begin(bool wakeup) {
 
   roo_io::MacAddress peer_addr = getPeerAddress();
   if (peer_addr.asU64() != 0) {
-    station_channel_ = peer_channel_.get();
+    transport_.setChannel(peer_channel_.get());
     ESP_ERROR_CHECK(
-        esp_wifi_set_channel(station_channel_, WIFI_SECOND_CHAN_NONE));
+        esp_wifi_set_channel(transport_.channel(), WIFI_SECOND_CHAN_NONE));
     initPeer(peer_addr);
     setState(kPaired);
   } else {
@@ -103,17 +102,16 @@ void PairableDevice::begin(bool wakeup) {
   }
 }
 
-void PairableDevice::onDataSent(const uint8_t* mac_addr,
-                                esp_now_send_status_t status) {
+void PairableDevice::onDataSent(const uint8_t* mac_addr, bool success) {
   if (!isPaired()) {
-    if (status == ESP_NOW_SEND_SUCCESS) {
+    if (success) {
       LOG(INFO) << "Packet sent successfully";
     } else {
       LOG(WARNING) << "Failed to send packet";
     }
   } else {
     if (on_app_data_sent_ != nullptr) {
-      on_app_data_sent_(roo_io::MacAddress(mac_addr), status);
+      on_app_data_sent_(roo_io::MacAddress(mac_addr), success);
     }
   }
 }
@@ -146,7 +144,7 @@ void PairableDevice::setState(State new_state) {
       break;
     }
     case kPaired: {
-      ESP_ERROR_CHECK(esp_now_del_peer(peer_.peer_addr));
+      peer_.reset();
       break;
     }
   }
@@ -182,38 +180,23 @@ void PairableDevice::setState(State new_state) {
   State prev_state = state_;
   state_ = new_state;
   LOG(INFO) << "Calling state change notifier";
-  Serial.println("Boo");
   if (on_state_changed_ != nullptr) {
     on_state_changed_(prev_state, state_);
   }
 }
 
 void PairableDevice::sendBroadcastAnnounceMessage() {
-  esp_now_peer_info_t peer;
-  memset(&peer, 0, sizeof(peer));
-  for (int ii = 0; ii < 6; ++ii) {
-    roo_io::MacAddress::Broadcast().writeTo(peer.peer_addr);
-  }
-  peer.channel = station_channel_;
-  peer.encrypt = 0;  // no encryption
-
   roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
   msg.which_contents = roo_comms_ControlMessage_hub_discovery_request_tag;
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_discovery_request.device_descriptor = *device_descriptor_;
 
-  // ESP_ERROR_CHECK(esp_wifi_set_channel(i, WIFI_SECOND_CHAN_NONE));
-  ESP_ERROR_CHECK(esp_now_add_peer(&peer));
-  roo_comms::SendEspNowControlMessage(peer, roo_comms::kMagicControlMsg, msg);
-  ESP_ERROR_CHECK(esp_now_del_peer(peer.peer_addr));
+  auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
+  transport_.broadcast(serialized.data, serialized.size);
 }
 
 void PairableDevice::initPeer(const roo_io::MacAddress& peer_addr) {
-  peer_ = {};
-  peer_addr.writeTo(peer_.peer_addr);
-  peer_.channel = station_channel_;
-  peer_.encrypt = 0;  // no encryption
-  ESP_ERROR_CHECK(esp_now_add_peer(&peer_));
+  peer_.reset(new EspNowPeer(transport_, peer_addr));
 }
 
 void PairableDevice::sendPairingRequestMessage() {
@@ -222,7 +205,7 @@ void PairableDevice::sendPairingRequestMessage() {
   msg.which_contents = roo_comms_ControlMessage_hub_pairing_request_tag;
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_pairing_request.device_descriptor = *device_descriptor_;
-  roo_comms::SendEspNowControlMessage(peer_, roo_comms::kMagicControlMsg, msg);
+  roo_comms::SendEspNowControlMessage(*peer_, roo_comms::kMagicControlMsg, msg);
 }
 
 void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
@@ -238,9 +221,9 @@ void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
               msg.control_msg.contents.hub_discovery_response.hub_channel;
           LOG(INFO) << "Received broadcast announce response with channel "
                     << channel;
-          station_channel_ = channel;
-          ESP_ERROR_CHECK(
-              esp_wifi_set_channel(station_channel_, WIFI_SECOND_CHAN_NONE));
+          transport_.setChannel(channel);
+          ESP_ERROR_CHECK(esp_wifi_set_channel(transport_.channel(),
+                                               WIFI_SECOND_CHAN_NONE));
           initPeer(msg.source);
           sendPairingRequestMessage();
           setState(kAwaitingPairingConfirmation);
@@ -253,7 +236,7 @@ void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
                 << "Received paiting confirmation, but we're not pairing.";
             break;
           }
-          setPeer(station_channel_, msg.source);
+          setPeer(transport_.channel(), msg.source);
           setState(kPaired);
           break;
         }
@@ -284,10 +267,10 @@ void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
 }
 
 void PairableDevice::cycleChannelAndBroadcast() {
-  ++station_channel_;
-  if (station_channel_ >= 15) station_channel_ = 1;
-  ESP_ERROR_CHECK(
-      esp_wifi_set_channel(station_channel_, WIFI_SECOND_CHAN_NONE));
+  uint8_t channel = transport_.channel() + 1;
+  if (channel >= 15) channel = 1;
+  transport_.setChannel(channel);
+  ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
   sendBroadcastAnnounceMessage();
 
   // // Now, wait 1s for pairing invitation.

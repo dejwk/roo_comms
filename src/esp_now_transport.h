@@ -13,6 +13,35 @@
 
 namespace roo_comms {
 
+class EspNowTransport {
+ public:
+  EspNowTransport(int channel) : channel_(channel) {}
+
+  uint8_t channel() const { return channel_; }
+  void setChannel(uint8_t channel) { channel_ = channel; }
+
+  void sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len) const;
+
+  void broadcast(const void* data, size_t len) const;
+
+ private:
+  friend class EspNowPeer;
+
+  uint8_t channel_;
+};
+
+class EspNowPeer {
+ public:
+  EspNowPeer(const EspNowTransport& transport, const roo_io::MacAddress& addr);
+
+  ~EspNowPeer();
+
+  bool send(const void* data, size_t len) const;
+
+ private:
+  esp_now_peer_info_t peer_;
+};
+
 using Magic = roo_io::byte[8];
 
 static constexpr roo_io::byte kMagicControlMsg[8] = {
@@ -41,10 +70,7 @@ struct SerializedDataMessage {
 SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
                                            const Magic& magic);
 
-void SendEspNowMessage(const esp_now_peer_info_t& peer, const void* buf,
-                       size_t len);
-
-void SendEspNowControlMessage(const esp_now_peer_info_t& peer,
+void SendEspNowControlMessage(const EspNowPeer& peer,
                               const Magic& magic,
                               const roo_comms_ControlMessage& msg);
 

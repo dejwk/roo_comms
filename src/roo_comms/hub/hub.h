@@ -35,7 +35,7 @@ class Hub {
 
   roo_comms_DeviceDescriptor *lookupDescriptor(const roo_io::MacAddress &addr);
 
-  int channel() const { return channel_; }
+  const EspNowTransport& transport() const { return transport_; }
 
  private:
   friend class TransceiverHub;
@@ -60,7 +60,7 @@ class Hub {
   void writeTransceiverAddresses(roo_prefs::Transaction &t);
 
   roo_prefs::Collection store_;
-  int channel_;
+  EspNowTransport transport_;
   roo_comms::Receiver receiver_;
 
   PayloadCb payload_cb_;

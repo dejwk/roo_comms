@@ -1,6 +1,43 @@
 #include "esp_now_transport.h"
 
+#include "esp_err.h"
+
 namespace roo_comms {
+
+EspNowPeer::EspNowPeer(const EspNowTransport& transport,
+                       const roo_io::MacAddress& addr)
+    : peer_{} {
+  addr.writeTo(peer_.peer_addr);
+  peer_.channel = transport.channel_;
+  peer_.encrypt = 0;  // no encryption
+  ESP_ERROR_CHECK(esp_now_add_peer(&peer_));
+}
+
+EspNowPeer::~EspNowPeer() {
+  ESP_ERROR_CHECK(esp_now_del_peer(peer_.peer_addr));
+}
+
+bool EspNowPeer::send(const void* data, size_t len) const {
+  esp_err_t result = esp_now_send(peer_.peer_addr, (const uint8_t*)data, len);
+  if (result == ESP_OK) {
+    return true;
+  } else {
+    LOG(ERROR) << "ESP-NOW sending data message failed with code "
+               << (int)result;
+    return false;
+  }
+}
+
+void EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
+                               size_t len) const {
+  EspNowPeer peer(*this, addr);
+  peer.send(data, len);
+}
+
+void EspNowTransport::broadcast(const void* data, size_t len) const {
+  EspNowPeer peer(*this, roo_io::MacAddress::Broadcast());
+  peer.send(data, len);
+}
 
 SerializedControlMessage SerializeControlMessage(
     const roo_comms_ControlMessage& msg, const Magic& magic) {
@@ -34,20 +71,11 @@ SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
   return result;
 }
 
-void SendEspNowControlMessage(const esp_now_peer_info_t& peer,
+void SendEspNowControlMessage(const EspNowPeer& peer,
                               const Magic& magic,
                               const roo_comms_ControlMessage& msg) {
   auto result = SerializeControlMessage(msg, magic);
-  SendEspNowMessage(peer, result.data, result.size);
-}
-
-void SendEspNowMessage(const esp_now_peer_info_t& peer, const void* buf,
-                       size_t len) {
-  esp_err_t result = esp_now_send(peer.peer_addr, (const uint8_t*)buf, len);
-  if (result != ESP_OK) {
-    LOG(ERROR) << "ESP-NOW sending data message failed with code "
-               << (int)result;
-  }
+  peer.send(result.data, result.size);
 }
 
 }  // namespace roo_comms
