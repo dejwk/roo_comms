@@ -53,19 +53,17 @@ void MonochromeLedSignaler::signalPairing() {
 }
 
 PairableDevice::PairableDevice(
-  EspNowTransport& transport,
+    EspNowTransport& transport,
     const roo_comms_DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
-    std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent,
     std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv)
     : transport_(transport),
       device_descriptor_(device_descriptor),
       prefs_(prefs),
       signaler_(signaler),
       on_state_changed_(on_state_changed),
-      on_app_data_sent_(on_app_data_sent),
       on_app_data_recv_(on_app_data_recv),
       peer_id_(prefs_, "peer", 0),
       peer_channel_(prefs_, "channel", 0),
@@ -76,7 +74,7 @@ PairableDevice::PairableDevice(
                   LOG(INFO) << "Unpairing";
                   setState(kNotPaired);
                 }),
-      receiver_(roo_comms::kMagicControlMsg, roo_comms::kMagicDataMsg,
+      receiver_(roo_comms::kControlMagic, roo_comms::kDataMagicHomeAutomation,
                 scheduler,
                 [this](const roo_comms::ReceivedMessage& msg) {
                   processMessage(msg);
@@ -98,20 +96,6 @@ void PairableDevice::begin(bool wakeup) {
     setState(kPaired);
   } else {
     setState(kNotPaired);
-  }
-}
-
-void PairableDevice::onDataSent(const uint8_t* mac_addr, bool success) {
-  if (!isPaired()) {
-    if (success) {
-      LOG(INFO) << "Packet sent successfully: " << roo_io::MacAddress(mac_addr);
-    } else {
-      LOG(WARNING) << "Failed to send packet";
-    }
-  } else {
-    if (on_app_data_sent_ != nullptr) {
-      on_app_data_sent_(roo_io::MacAddress(mac_addr), success);
-    }
   }
 }
 
@@ -190,7 +174,7 @@ void PairableDevice::sendBroadcastAnnounceMessage() {
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_discovery_request.device_descriptor = *device_descriptor_;
 
-  auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
+  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
   transport_.broadcastAsync(serialized.data, serialized.size);
 }
 
@@ -204,7 +188,7 @@ void PairableDevice::sendPairingRequestMessage() {
   msg.which_contents = roo_comms_ControlMessage_hub_pairing_request_tag;
   msg.contents.hub_pairing_request.has_device_descriptor = true;
   msg.contents.hub_pairing_request.device_descriptor = *device_descriptor_;
-  roo_comms::SendEspNowControlMessage(*peer_, roo_comms::kMagicControlMsg, msg);
+  roo_comms::SendEspNowControlMessage(*peer_, roo_comms::kControlMagic, msg);
 }
 
 void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {

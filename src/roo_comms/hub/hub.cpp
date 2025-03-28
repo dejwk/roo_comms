@@ -18,14 +18,15 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
 void SendControlMessage(EspNowTransport &transport,
                         const roo_io::MacAddress &destination,
                         const roo_comms_ControlMessage &msg) {
-  auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
+  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
   transport.sendOnceAsync(destination, serialized.data, serialized.size);
 }
 
-void SendDataMessage(EspNowTransport &transport,
-                     const roo_io::MacAddress &destination,
-                     const roo_comms_DataMessage &msg) {
-  auto serialized = SerializeDataMessage(msg, roo_comms::kMagicDataMsg);
+void SendHomeAutomationDataMessage(EspNowTransport &transport,
+                                   const roo_io::MacAddress &destination,
+                                   const roo_comms_DataMessage &msg) {
+  auto serialized =
+      SerializeDataMessage(msg, roo_comms::kDataMagicHomeAutomation);
   transport.sendOnceAsync(destination, serialized.data, serialized.size);
 }
 
@@ -106,7 +107,7 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
          PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
       transport_(transport),
-      receiver_(roo_comms::kMagicControlMsg, roo_comms::kMagicDataMsg,
+      receiver_(roo_comms::kControlMagic, roo_comms::kDataMagicHomeAutomation,
                 scheduler,
                 [this](roo_comms::ReceivedMessage received) {
                   processMessage(std::move(received));
@@ -421,7 +422,7 @@ bool WriteRelay(EspNowTransport &transport, const roo_io::MacAddress &device,
     msg.which_contents = roo_comms_DataMessage_relay_request_tag;
     msg.contents.relay_request.mask = (1 << d);
     msg.contents.relay_request.write = value == 1.0f ? (1 << d) : 0;
-    SendDataMessage(transport, device, msg);
+    SendHomeAutomationDataMessage(transport, device, msg);
     return true;
   }
   return false;
@@ -433,7 +434,7 @@ void RequestRelayState(EspNowTransport &transport,
   msg.which_contents = roo_comms_DataMessage_relay_request_tag;
   msg.contents.relay_request.mask = 0;
   msg.contents.relay_request.write = 0;
-  SendDataMessage(transport, device, msg);
+  SendHomeAutomationDataMessage(transport, device, msg);
 }
 
 }  // namespace

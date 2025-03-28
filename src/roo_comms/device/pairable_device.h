@@ -69,7 +69,6 @@ class PairableDevice {
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
-      std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent,
       std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv);
 
   void begin(bool wakeup);
@@ -79,8 +78,6 @@ class PairableDevice {
   bool isPaired() const { return state() == kPaired; }
 
   EspNowPeer* peer() { return peer_.get(); }
-
-  void onDataSent(const uint8_t* mac_addr, bool success);
 
   void onDataRecv(const uint8_t* source_mac_addr, const uint8_t* incomingData,
                   int len);
@@ -112,7 +109,6 @@ class PairableDevice {
   StateSignaler& signaler_;
 
   std::function<void(State prev_state, State new_state)> on_state_changed_;
-  std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent_;
   std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv_;
 
   roo_prefs::Uint64 peer_id_;

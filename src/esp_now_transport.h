@@ -35,17 +35,32 @@ class EspNowTransport {
   bool sendOnceAsync(const roo_io::MacAddress& addr, const void* data,
                      size_t len);
 
+  // Sends a message and waits until it gets delivered to the recipient ESP
+  // service. Usually takes a few ms. Returns true if delivery was successful;
+  // false otherwise.
+  //
+  // FIFO delivery order is guaranteed per recipient.
+  bool send(const EspNowPeer& peer, const void* data, size_t len);
+
+  // Sends a message without waiting for delivery. Returns true if the message
+  // was successfully enqueued; false otherwise.
   bool sendAsync(const EspNowPeer& peer, const void* data, size_t len);
 
   void broadcastAsync(const void* data, size_t len);
 
+  // Must be called by the registered ESP-NOW callback. Otherwise, memory leaks
+  // and deadlocks may occur.
   void ackSent(const roo_io::MacAddress& addr, bool success);
 
  private:
+  struct Counter {
+    Counter() : count(0) {}
+    int count;
+  };
   friend class EspNowPeer;
-
   std::mutex pending_send_mutex_;
-  roo_collections::FlatSmallHashMap<roo_io::MacAddress, int> pending_;
+  std::condition_variable pending_emptied_;
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress, Counter> pending_;
 
   uint8_t channel_;
 };
@@ -55,7 +70,15 @@ class EspNowPeer {
   EspNowPeer(EspNowTransport& transport, const roo_io::MacAddress& addr);
 
   ~EspNowPeer();
+  // Sends a message and waits until it gets delivered to the peer ESP
+  // service. Usually takes a few ms. Returns true if delivery was successful;
+  // false otherwise.
+  //
+  // FIFO delivery order is guaranteed per peer.
+  bool send(const void* data, size_t len);
 
+  // Sends a message without waiting for delivery. Returns true if the message
+  // was successfully enqueued; false otherwise.
   bool sendAsync(const void* data, size_t len);
 
  private:
@@ -67,12 +90,14 @@ class EspNowPeer {
 
 using Magic = roo_io::byte[8];
 
-static constexpr roo_io::byte kMagicControlMsg[8] = {
+static constexpr roo_io::byte kControlMagic[8] = {
     roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
     roo_io::byte{0},    roo_io::byte{0xE1}, roo_io::byte{0xB2},
     roo_io::byte{0x88}, roo_io::byte{0x99}};
 
-static constexpr roo_io::byte kMagicDataMsg[8] = {
+// Payload identifier for 'home automation' device universe, using
+// roo_comms_DataMessage payload.
+static constexpr roo_io::byte kDataMagicHomeAutomation[8] = {
     roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
     roo_io::byte{0},    roo_io::byte{0x5E}, roo_io::byte{0x0C},
     roo_io::byte{0x15}, roo_io::byte{0x03}};
