@@ -15,14 +15,14 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
     roo_transceivers::DeviceSchema("esp-now");
 
 // The hub doesn't remember all its peers and it rarely responds to them.
-void SendControlMessage(const EspNowTransport &transport,
+void SendControlMessage(EspNowTransport &transport,
                         const roo_io::MacAddress &destination,
                         const roo_comms_ControlMessage &msg) {
   auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
   transport.sendOnce(destination, serialized.data, serialized.size);
 }
 
-void SendDataMessage(const EspNowTransport &transport,
+void SendDataMessage(EspNowTransport &transport,
                      const roo_io::MacAddress &destination,
                      const roo_comms_DataMessage &msg) {
   auto serialized = SerializeDataMessage(msg, roo_comms::kMagicDataMsg);
@@ -102,10 +102,10 @@ void Hub::processMessage(roo_comms::ReceivedMessage received) {
   }
 }
 
-Hub::Hub(roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
-         TransceiverChangedCb transceiver_changed_cb)
+Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
+         PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
-      transport_(),
+      transport_(transport),
       receiver_(roo_comms::kMagicControlMsg, roo_comms::kMagicDataMsg,
                 scheduler,
                 [this](roo_comms::ReceivedMessage received) {
@@ -257,9 +257,10 @@ roo_comms_DeviceDescriptor *Hub::lookupDescriptor(
   return (itr != transceiver_details_.end()) ? nullptr : &itr->second;
 }
 
-TransceiverHub::TransceiverHub(roo_scheduler::Scheduler &scheduler)
+TransceiverHub::TransceiverHub(EspNowTransport &transport,
+                               roo_scheduler::Scheduler &scheduler)
     : hub_(
-          scheduler,
+          transport, scheduler,
           [this](const roo_io::MacAddress &addr,
                  const roo_comms_DataMessage &msg) {
             processDataMessage(addr, msg);
@@ -411,8 +412,7 @@ roo_transceivers::Measurement ReadRelay(
   return roo_transceivers::Measurement();
 }
 
-bool WriteRelay(const EspNowTransport &transport,
-                const roo_io::MacAddress &device,
+bool WriteRelay(EspNowTransport &transport, const roo_io::MacAddress &device,
                 const roo_transceivers::ActuatorId &actuator_id, float value) {
   if (value != 0.0f && value != 1.0f) return false;
   int d = extractRelayId(actuator_id.c_str());
@@ -427,7 +427,7 @@ bool WriteRelay(const EspNowTransport &transport,
   return false;
 }
 
-void RequestRelayState(const EspNowTransport &transport,
+void RequestRelayState(EspNowTransport &transport,
                        const roo_io::MacAddress &device) {
   roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
   msg.which_contents = roo_comms_DataMessage_relay_request_tag;

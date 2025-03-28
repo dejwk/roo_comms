@@ -104,7 +104,7 @@ void PairableDevice::begin(bool wakeup) {
 void PairableDevice::onDataSent(const uint8_t* mac_addr, bool success) {
   if (!isPaired()) {
     if (success) {
-      LOG(INFO) << "Packet sent successfully";
+      LOG(INFO) << "Packet sent successfully: " << roo_io::MacAddress(mac_addr);
     } else {
       LOG(WARNING) << "Failed to send packet";
     }

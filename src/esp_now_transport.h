@@ -1,10 +1,14 @@
 #pragma once
 
+#include <thread>
+
 #include "comms.pb.h"
 #include "esp_now.h"
 #include "message_queue.h"
 #include "pb_decode.h"
 #include "pb_encode.h"
+#include "roo_collections/flat_small_hash_map.h"
+#include "roo_collections/flat_small_hash_set.h"
 #include "roo_io/base/byte.h"
 #include "roo_io/memory/memory_output_iterator.h"
 #include "roo_io/net/mac_address.h"
@@ -13,8 +17,14 @@
 
 namespace roo_comms {
 
+class EspNowPeer;
+
 class EspNowTransport {
  public:
+  // using ReceiverFn = std::function<void(const roo_io::MacAddress&,
+  //                                       const uint8_t* incoming_data,
+  //                                       size_t len)>;
+
   EspNowTransport() : channel_(0) {}
 
   uint8_t channel() const { return channel_; }
@@ -22,25 +32,35 @@ class EspNowTransport {
   // Must be called after Wifi is initialized.
   void setChannel(uint8_t channel);
 
-  void sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len) const;
+  bool sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len);
 
-  void broadcast(const void* data, size_t len) const;
+  bool send(const EspNowPeer& peer, const void* data, size_t len);
+
+  void broadcast(const void* data, size_t len);
+
+  void ackSent(const roo_io::MacAddress& addr, bool success);
 
  private:
   friend class EspNowPeer;
+
+  std::mutex pending_send_mutex_;
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress, int> pending_;
 
   uint8_t channel_;
 };
 
 class EspNowPeer {
  public:
-  EspNowPeer(const EspNowTransport& transport, const roo_io::MacAddress& addr);
+  EspNowPeer(EspNowTransport& transport, const roo_io::MacAddress& addr);
 
   ~EspNowPeer();
 
-  bool send(const void* data, size_t len) const;
+  bool send(const void* data, size_t len);
 
  private:
+  friend class EspNowTransport;
+
+  EspNowTransport& transport_;
   esp_now_peer_info_t peer_;
 };
 
@@ -72,8 +92,7 @@ struct SerializedDataMessage {
 SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
                                            const Magic& magic);
 
-void SendEspNowControlMessage(const EspNowPeer& peer,
-                              const Magic& magic,
+void SendEspNowControlMessage(EspNowPeer& peer, const Magic& magic,
                               const roo_comms_ControlMessage& msg);
 
 struct ReceivedMessage {

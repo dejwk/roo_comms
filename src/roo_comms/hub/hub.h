@@ -17,8 +17,8 @@ class Hub {
                                        const roo_comms_DataMessage &)>;
   using TransceiverChangedCb = std::function<void()>;
 
-  Hub(roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
-      TransceiverChangedCb transceiver_changed_cb);
+  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
+      PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb);
 
   void init(uint8_t channel);
 
@@ -35,7 +35,7 @@ class Hub {
 
   roo_comms_DeviceDescriptor *lookupDescriptor(const roo_io::MacAddress &addr);
 
-  const EspNowTransport& transport() const { return transport_; }
+  EspNowTransport &transport() { return transport_; }
 
  private:
   friend class TransceiverHub;
@@ -60,7 +60,7 @@ class Hub {
   void writeTransceiverAddresses(roo_prefs::Transaction &t);
 
   roo_prefs::Collection store_;
-  EspNowTransport transport_;
+  EspNowTransport &transport_;
   roo_comms::Receiver receiver_;
 
   PayloadCb payload_cb_;
@@ -82,7 +82,8 @@ struct DeviceState {
 
 class TransceiverHub : public roo_transceivers::Universe {
  public:
-  TransceiverHub(roo_scheduler::Scheduler &scheduler);
+  TransceiverHub(EspNowTransport &transport,
+                 roo_scheduler::Scheduler &scheduler);
 
   void init(uint8_t channel) { hub_.init(channel); }
 
@@ -123,11 +124,11 @@ class TransceiverHub : public roo_transceivers::Universe {
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();
 
-  Hub hub_;
+  mutable Hub hub_;
   roo_collections::FlatSmallHashMap<roo_io::MacAddress, DeviceState> states_;
 
   roo_collections::FlatSmallHashSet<roo_transceivers::EventListener *>
       listeners_;
 };
 
-}
+}  // namespace roo_comms

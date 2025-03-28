@@ -10,9 +10,9 @@ void EspNowTransport::setChannel(uint8_t channel) {
   ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
 }
 
-EspNowPeer::EspNowPeer(const EspNowTransport& transport,
+EspNowPeer::EspNowPeer(EspNowTransport& transport,
                        const roo_io::MacAddress& addr)
-    : peer_{} {
+    : transport_(transport), peer_{} {
   addr.writeTo(peer_.peer_addr);
   peer_.channel = transport.channel_;
   peer_.encrypt = 0;  // no encryption
@@ -23,9 +23,15 @@ EspNowPeer::~EspNowPeer() {
   ESP_ERROR_CHECK(esp_now_del_peer(peer_.peer_addr));
 }
 
-bool EspNowPeer::send(const void* data, size_t len) const {
-  esp_err_t result = esp_now_send(peer_.peer_addr, (const uint8_t*)data, len);
+bool EspNowPeer::send(const void* data, size_t len) {
+  return transport_.send(*this, data, len);
+}
+
+bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
+                           size_t len) {
+  esp_err_t result = esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
   if (result == ESP_OK) {
+    LOG(INFO) << "Packet seding: " << roo_io::MacAddress(peer.peer_.peer_addr);
     return true;
   } else {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
@@ -34,15 +40,13 @@ bool EspNowPeer::send(const void* data, size_t len) const {
   }
 }
 
-void EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
-                               size_t len) const {
-  EspNowPeer peer(*this, addr);
-  peer.send(data, len);
+bool EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
+                               size_t len) {
+  return send(EspNowPeer(*this, addr), data, len);
 }
 
-void EspNowTransport::broadcast(const void* data, size_t len) const {
-  EspNowPeer peer(*this, roo_io::MacAddress::Broadcast());
-  peer.send(data, len);
+void EspNowTransport::broadcast(const void* data, size_t len) {
+  send(EspNowPeer(*this, roo_io::MacAddress::Broadcast()), data, len);
 }
 
 SerializedControlMessage SerializeControlMessage(
@@ -77,8 +81,7 @@ SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
   return result;
 }
 
-void SendEspNowControlMessage(const EspNowPeer& peer,
-                              const Magic& magic,
+void SendEspNowControlMessage(EspNowPeer& peer, const Magic& magic,
                               const roo_comms_ControlMessage& msg) {
   auto result = SerializeControlMessage(msg, magic);
   peer.send(result.data, result.size);

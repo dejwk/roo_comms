@@ -78,7 +78,7 @@ class PairableDevice {
 
   bool isPaired() const { return state() == kPaired; }
 
-  const EspNowPeer* peer() const { return peer_.get(); }
+  EspNowPeer* peer() { return peer_.get(); }
 
   void onDataSent(const uint8_t* mac_addr, bool success);
 
