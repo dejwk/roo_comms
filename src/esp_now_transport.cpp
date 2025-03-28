@@ -23,11 +23,11 @@ EspNowPeer::~EspNowPeer() {
   ESP_ERROR_CHECK(esp_now_del_peer(peer_.peer_addr));
 }
 
-bool EspNowPeer::send(const void* data, size_t len) {
-  return transport_.send(*this, data, len);
+bool EspNowPeer::sendAsync(const void* data, size_t len) {
+  return transport_.sendAsync(*this, data, len);
 }
 
-bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
+bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
                            size_t len) {
   esp_err_t result = esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
   if (result == ESP_OK) {
@@ -40,13 +40,13 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   }
 }
 
-bool EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
+bool EspNowTransport::sendOnceAsync(const roo_io::MacAddress& addr, const void* data,
                                size_t len) {
-  return send(EspNowPeer(*this, addr), data, len);
+  return sendAsync(EspNowPeer(*this, addr), data, len);
 }
 
-void EspNowTransport::broadcast(const void* data, size_t len) {
-  send(EspNowPeer(*this, roo_io::MacAddress::Broadcast()), data, len);
+void EspNowTransport::broadcastAsync(const void* data, size_t len) {
+  sendAsync(EspNowPeer(*this, roo_io::MacAddress::Broadcast()), data, len);
 }
 
 SerializedControlMessage SerializeControlMessage(
@@ -84,7 +84,7 @@ SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
 void SendEspNowControlMessage(EspNowPeer& peer, const Magic& magic,
                               const roo_comms_ControlMessage& msg) {
   auto result = SerializeControlMessage(msg, magic);
-  peer.send(result.data, result.size);
+  peer.sendAsync(result.data, result.size);
 }
 
 }  // namespace roo_comms

@@ -191,7 +191,7 @@ void PairableDevice::sendBroadcastAnnounceMessage() {
   msg.contents.hub_discovery_request.device_descriptor = *device_descriptor_;
 
   auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
-  transport_.broadcast(serialized.data, serialized.size);
+  transport_.broadcastAsync(serialized.data, serialized.size);
 }
 
 void PairableDevice::initPeer(const roo_io::MacAddress& peer_addr) {

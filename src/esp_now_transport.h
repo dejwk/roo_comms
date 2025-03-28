@@ -32,11 +32,12 @@ class EspNowTransport {
   // Must be called after Wifi is initialized.
   void setChannel(uint8_t channel);
 
-  bool sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len);
+  bool sendOnceAsync(const roo_io::MacAddress& addr, const void* data,
+                     size_t len);
 
-  bool send(const EspNowPeer& peer, const void* data, size_t len);
+  bool sendAsync(const EspNowPeer& peer, const void* data, size_t len);
 
-  void broadcast(const void* data, size_t len);
+  void broadcastAsync(const void* data, size_t len);
 
   void ackSent(const roo_io::MacAddress& addr, bool success);
 
@@ -55,7 +56,7 @@ class EspNowPeer {
 
   ~EspNowPeer();
 
-  bool send(const void* data, size_t len);
+  bool sendAsync(const void* data, size_t len);
 
  private:
   friend class EspNowTransport;

@@ -19,14 +19,14 @@ void SendControlMessage(EspNowTransport &transport,
                         const roo_io::MacAddress &destination,
                         const roo_comms_ControlMessage &msg) {
   auto serialized = SerializeControlMessage(msg, roo_comms::kMagicControlMsg);
-  transport.sendOnce(destination, serialized.data, serialized.size);
+  transport.sendOnceAsync(destination, serialized.data, serialized.size);
 }
 
 void SendDataMessage(EspNowTransport &transport,
                      const roo_io::MacAddress &destination,
                      const roo_comms_DataMessage &msg) {
   auto serialized = SerializeDataMessage(msg, roo_comms::kMagicDataMsg);
-  transport.sendOnce(destination, serialized.data, serialized.size);
+  transport.sendOnceAsync(destination, serialized.data, serialized.size);
 }
 
 void Hub::processDiscoveryRequest(
