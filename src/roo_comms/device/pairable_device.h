@@ -64,6 +64,7 @@ class PairableDevice {
   };
 
   PairableDevice(
+      EspNowTransport& transport,
       const roo_comms_DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
@@ -103,6 +104,8 @@ class PairableDevice {
 
   void setPeer(int channel, const roo_io::MacAddress& addr);
 
+  EspNowTransport& transport_;
+
   const roo_comms_DeviceDescriptor* device_descriptor_;
 
   roo_prefs::Collection& prefs_;
@@ -122,7 +125,6 @@ class PairableDevice {
 
   Receiver receiver_;
 
-  EspNowTransport transport_;
   State state_;
 
   Button button_;

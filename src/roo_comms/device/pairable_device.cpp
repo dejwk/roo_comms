@@ -53,13 +53,15 @@ void MonochromeLedSignaler::signalPairing() {
 }
 
 PairableDevice::PairableDevice(
+  EspNowTransport& transport,
     const roo_comms_DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
     std::function<void(const roo_io::MacAddress&, bool)> on_app_data_sent,
     std::function<void(const roo_comms::ReceivedMessage&)> on_app_data_recv)
-    : device_descriptor_(device_descriptor),
+    : transport_(transport),
+      device_descriptor_(device_descriptor),
       prefs_(prefs),
       signaler_(signaler),
       on_state_changed_(on_state_changed),
@@ -79,7 +81,6 @@ PairableDevice::PairableDevice(
                 [this](const roo_comms::ReceivedMessage& msg) {
                   processMessage(msg);
                 }),
-      transport_(),
       state_(kStartup),
       button_(button, scheduler, [this]() { setState(kPairing); }) {}
 
