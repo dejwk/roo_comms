@@ -31,6 +31,8 @@ class EspNowTransport {
   // Must be called after Wifi is initialized.
   void setChannel(uint8_t channel);
 
+  bool sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len);
+
   bool sendOnceAsync(const roo_io::MacAddress& addr, const void* data,
                      size_t len);
 

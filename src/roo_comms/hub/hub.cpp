@@ -12,14 +12,7 @@ static const char *kMacsKey = "macs";
 static constexpr size_t kMaxPairedDevices = 1000;
 
 static roo_transceivers::DeviceSchema kEspNowSchema =
-    roo_transceivers::DeviceSchema("esp-now");
-
-void SendHomeAutomationDataMessage(EspNowTransport &transport,
-                                   const roo_io::MacAddress &destination,
-                                   const roo_comms_DataMessage &msg) {
-  auto serialized = SerializeHomeAutomationDataMessage(msg);
-  transport.sendOnceAsync(destination, serialized.data, serialized.size);
-}
+    roo_transceivers::DeviceSchema("roo");
 
 void Hub::processDiscoveryRequest(
     const roo_io::MacAddress &origin,
@@ -74,16 +67,8 @@ void Hub::processMessage(const roo_comms::Receiver::Message &received) {
       return;
     }
   }
-  {
-    roo_comms_DataMessage msg;
-    if (TryParsingAsHomeAutomationDataMessage(received.data.get(),
-                                              received.size, msg)) {
-      if (payload_cb_ != nullptr) {
-        payload_cb_(received);
-      }
-      return;
-    }
-    LOG(WARNING) << "Ignoring bogus message";
+  if (payload_cb_ != nullptr) {
+    payload_cb_(received);
   }
 }
 
@@ -398,28 +383,16 @@ roo_transceivers::Measurement ReadRelay(
   return roo_transceivers::Measurement();
 }
 
-bool WriteRelay(EspNowTransport &transport, const roo_io::MacAddress &device,
-                const roo_transceivers::ActuatorId &actuator_id, float value) {
+bool WriteRelayUniversal(EspNowTransport &transport,
+                         const roo_io::MacAddress &device,
+                         const roo_transceivers::ActuatorId &actuator_id,
+                         float value) {
   if (value != 0.0f && value != 1.0f) return false;
   int d = extractRelayId(actuator_id.c_str());
   if (d >= 0) {
-    roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
-    msg.which_contents = roo_comms_DataMessage_relay_request_tag;
-    msg.contents.relay_request.mask = (1 << d);
-    msg.contents.relay_request.write = value == 1.0f ? (1 << d) : 0;
-    SendHomeAutomationDataMessage(transport, device, msg);
-    return true;
+    return WriteRelay(transport, device, d, value == 1.0f);
   }
   return false;
-}
-
-void RequestRelayState(EspNowTransport &transport,
-                       const roo_io::MacAddress &device) {
-  roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
-  msg.which_contents = roo_comms_DataMessage_relay_request_tag;
-  msg.contents.relay_request.mask = 0;
-  msg.contents.relay_request.write = 0;
-  SendHomeAutomationDataMessage(transport, device, msg);
 }
 
 }  // namespace
@@ -490,7 +463,7 @@ bool TransceiverHub::write(const roo_transceivers::ActuatorLocator &locator,
       return false;
     }
     case roo_comms_DeviceDescriptor_relay_tag: {
-      WriteRelay(hub_.transport(), addr, locator.actuator_id(), value);
+      WriteRelayUniversal(hub_.transport(), addr, locator.actuator_id(), value);
       return true;
     }
     default: {

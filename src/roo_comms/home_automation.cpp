@@ -39,4 +39,24 @@ SerializedHomeAutomationDataMessage SerializeHomeAutomationDataMessage(
   return result;
 }
 
+bool RequestRelayState(EspNowTransport& transport,
+                       const roo_io::MacAddress& device) {
+  roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
+  msg.which_contents = roo_comms_DataMessage_relay_request_tag;
+  msg.contents.relay_request.mask = 0;
+  msg.contents.relay_request.write = 0;
+  auto serialized = SerializeHomeAutomationDataMessage(msg);
+  return transport.sendOnce(device, serialized.data, serialized.size);
+}
+
+bool WriteRelay(EspNowTransport& transport, const roo_io::MacAddress& device,
+                int relay_idx, bool is_enabled) {
+  roo_comms_DataMessage msg = roo_comms_DataMessage_init_zero;
+  msg.which_contents = roo_comms_DataMessage_relay_request_tag;
+  msg.contents.relay_request.mask = (1 << relay_idx);
+  msg.contents.relay_request.write = is_enabled ? (1 << relay_idx) : 0;
+  auto serialized = SerializeHomeAutomationDataMessage(msg);
+  return transport.sendOnce(device, serialized.data, serialized.size);
+}
+
 }  // namespace roo_comms

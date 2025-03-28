@@ -73,6 +73,11 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
   }
 }
 
+bool EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
+                               size_t len) {
+  return send(EspNowPeer(*this, addr), data, len);
+}
+
 bool EspNowTransport::sendOnceAsync(const roo_io::MacAddress& addr,
                                     const void* data, size_t len) {
   return sendAsync(EspNowPeer(*this, addr), data, len);

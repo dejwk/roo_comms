@@ -16,4 +16,10 @@ struct SerializedHomeAutomationDataMessage {
 SerializedHomeAutomationDataMessage SerializeHomeAutomationDataMessage(
     const roo_comms_DataMessage& msg);
 
+bool RequestRelayState(EspNowTransport& transport,
+                       const roo_io::MacAddress& device);
+
+bool WriteRelay(EspNowTransport& transport, const roo_io::MacAddress& device,
+                int relay_idx, bool is_enabled);
+
 }  // namespace roo_comms
