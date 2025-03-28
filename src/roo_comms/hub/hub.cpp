@@ -102,10 +102,10 @@ void Hub::processMessage(roo_comms::ReceivedMessage received) {
   }
 }
 
-Hub::Hub(int channel, roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
+Hub::Hub(roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
          TransceiverChangedCb transceiver_changed_cb)
     : store_("hub"),
-      transport_(channel),
+      transport_(),
       receiver_(roo_comms::kMagicControlMsg, roo_comms::kMagicDataMsg,
                 scheduler,
                 [this](roo_comms::ReceivedMessage received) {
@@ -114,7 +114,8 @@ Hub::Hub(int channel, roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
       payload_cb_(payload_cb),
       transceiver_changed_cb_(transceiver_changed_cb) {}
 
-void Hub::init() {
+void Hub::init(uint8_t channel) {
+  transport_.setChannel(channel);
   transceiver_addresses_.clear();
   transceiver_details_.clear();
   std::unique_ptr<roo_io::byte[]> data = nullptr;
@@ -256,9 +257,9 @@ roo_comms_DeviceDescriptor *Hub::lookupDescriptor(
   return (itr != transceiver_details_.end()) ? nullptr : &itr->second;
 }
 
-TransceiverHub::TransceiverHub(int channel, roo_scheduler::Scheduler &scheduler)
+TransceiverHub::TransceiverHub(roo_scheduler::Scheduler &scheduler)
     : hub_(
-          channel, scheduler,
+          scheduler,
           [this](const roo_io::MacAddress &addr,
                  const roo_comms_DataMessage &msg) {
             processDataMessage(addr, msg);

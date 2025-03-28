@@ -9,7 +9,6 @@
 #include "esp_err.h"
 // #include "esp_now.h"
 #include "esp_now_transport.h"
-#include "esp_wifi.h"
 #include "roo_control/selector/push_button.h"
 #include "roo_control/selector/selector.h"
 #include "roo_io/net/mac_address.h"
@@ -121,7 +120,7 @@ class PairableDevice {
   roo_scheduler::SingletonTask pairing_canceler_;
   roo_scheduler::SingletonTask unpairer_;
 
-  roo_comms::Receiver receiver_;
+  Receiver receiver_;
 
   EspNowTransport transport_;
   State state_;

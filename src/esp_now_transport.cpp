@@ -1,8 +1,14 @@
 #include "esp_now_transport.h"
 
 #include "esp_err.h"
+#include "esp_wifi.h"
 
 namespace roo_comms {
+
+void EspNowTransport::setChannel(uint8_t channel) {
+  channel_ = channel;
+  ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
+}
 
 EspNowPeer::EspNowPeer(const EspNowTransport& transport,
                        const roo_io::MacAddress& addr)

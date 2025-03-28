@@ -17,10 +17,10 @@ class Hub {
                                        const roo_comms_DataMessage &)>;
   using TransceiverChangedCb = std::function<void()>;
 
-  Hub(int channel, roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
+  Hub(roo_scheduler::Scheduler &scheduler, PayloadCb payload_cb,
       TransceiverChangedCb transceiver_changed_cb);
 
-  void init();
+  void init(uint8_t channel);
 
   void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
 
@@ -82,9 +82,9 @@ struct DeviceState {
 
 class TransceiverHub : public roo_transceivers::Universe {
  public:
-  TransceiverHub(int channel, roo_scheduler::Scheduler &scheduler);
+  TransceiverHub(roo_scheduler::Scheduler &scheduler);
 
-  void init() { hub_.init(); }
+  void init(uint8_t channel) { hub_.init(channel); }
 
   void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
     hub_.onDataRecv(mac, incomingData, len);

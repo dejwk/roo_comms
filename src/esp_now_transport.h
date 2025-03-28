@@ -15,10 +15,12 @@ namespace roo_comms {
 
 class EspNowTransport {
  public:
-  EspNowTransport(int channel) : channel_(channel) {}
+  EspNowTransport() : channel_(0) {}
 
   uint8_t channel() const { return channel_; }
-  void setChannel(uint8_t channel) { channel_ = channel; }
+
+  // Must be called after Wifi is initialized.
+  void setChannel(uint8_t channel);
 
   void sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len) const;
 

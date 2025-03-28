@@ -79,7 +79,7 @@ PairableDevice::PairableDevice(
                 [this](const roo_comms::ReceivedMessage& msg) {
                   processMessage(msg);
                 }),
-      transport_(1),
+      transport_(),
       state_(kStartup),
       button_(button, scheduler, [this]() { setState(kPairing); }) {}
 
@@ -93,8 +93,6 @@ void PairableDevice::begin(bool wakeup) {
   roo_io::MacAddress peer_addr = getPeerAddress();
   if (peer_addr.asU64() != 0) {
     transport_.setChannel(peer_channel_.get());
-    ESP_ERROR_CHECK(
-        esp_wifi_set_channel(transport_.channel(), WIFI_SECOND_CHAN_NONE));
     initPeer(peer_addr);
     setState(kPaired);
   } else {
@@ -222,8 +220,6 @@ void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {
           LOG(INFO) << "Received broadcast announce response with channel "
                     << channel;
           transport_.setChannel(channel);
-          ESP_ERROR_CHECK(esp_wifi_set_channel(transport_.channel(),
-                                               WIFI_SECOND_CHAN_NONE));
           initPeer(msg.source);
           sendPairingRequestMessage();
           setState(kAwaitingPairingConfirmation);
@@ -270,7 +266,6 @@ void PairableDevice::cycleChannelAndBroadcast() {
   uint8_t channel = transport_.channel() + 1;
   if (channel >= 15) channel = 1;
   transport_.setChannel(channel);
-  ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
   sendBroadcastAnnounceMessage();
 
   // // Now, wait 1s for pairing invitation.
