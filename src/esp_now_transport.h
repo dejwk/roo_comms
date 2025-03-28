@@ -90,11 +90,6 @@ class EspNowPeer {
 
 using Magic = roo_io::byte[8];
 
-static constexpr roo_io::byte kControlMagic[8] = {
-    roo_io::byte{'r'},  roo_io::byte{'o'},  roo_io::byte{'o'},
-    roo_io::byte{0},    roo_io::byte{0xE1}, roo_io::byte{0xB2},
-    roo_io::byte{0x88}, roo_io::byte{0x99}};
-
 // Payload identifier for 'home automation' device universe, using
 // roo_comms_DataMessage payload.
 static constexpr roo_io::byte kDataMagicHomeAutomation[8] = {
@@ -102,13 +97,6 @@ static constexpr roo_io::byte kDataMagicHomeAutomation[8] = {
     roo_io::byte{0},    roo_io::byte{0x5E}, roo_io::byte{0x0C},
     roo_io::byte{0x15}, roo_io::byte{0x03}};
 
-struct SerializedControlMessage {
-  pb_byte_t data[8 + roo_comms_ControlMessage_size];
-  size_t size;
-};
-
-SerializedControlMessage SerializeControlMessage(
-    const roo_comms_ControlMessage& msg, const Magic& magic);
 
 struct SerializedDataMessage {
   pb_byte_t data[8 + roo_comms_DataMessage_size];
@@ -117,9 +105,6 @@ struct SerializedDataMessage {
 
 SerializedDataMessage SerializeDataMessage(const roo_comms_DataMessage& msg,
                                            const Magic& magic);
-
-void SendEspNowControlMessage(EspNowPeer& peer, const Magic& magic,
-                              const roo_comms_ControlMessage& msg);
 
 struct ReceivedMessage {
   roo_io::MacAddress source;

@@ -14,14 +14,6 @@ static constexpr size_t kMaxPairedDevices = 1000;
 static roo_transceivers::DeviceSchema kEspNowSchema =
     roo_transceivers::DeviceSchema("esp-now");
 
-// The hub doesn't remember all its peers and it rarely responds to them.
-void SendControlMessage(EspNowTransport &transport,
-                        const roo_io::MacAddress &destination,
-                        const roo_comms_ControlMessage &msg) {
-  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
-  transport.sendOnceAsync(destination, serialized.data, serialized.size);
-}
-
 void SendHomeAutomationDataMessage(EspNowTransport &transport,
                                    const roo_io::MacAddress &destination,
                                    const roo_comms_DataMessage &msg) {
@@ -34,11 +26,7 @@ void Hub::processDiscoveryRequest(
     const roo_io::MacAddress &origin,
     const roo_comms_DeviceDescriptor &descriptor) {
   if (!checkSupportedType(descriptor.which_kind)) return;
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_discovery_response_tag;
-  msg.contents.hub_discovery_response.hub_channel = transport_.channel();
-
-  SendControlMessage(transport_, origin, msg);
+  SendDiscoveryResponse(transport_, origin);
 }
 
 void Hub::processPairingRequest(const roo_io::MacAddress &origin,
@@ -48,11 +36,7 @@ void Hub::processPairingRequest(const roo_io::MacAddress &origin,
     LOG(WARNING) << "Failed to add transceiver " << origin;
     return;
   }
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_pairing_response_tag;
-  msg.contents.hub_pairing_response.status =
-      roo_comms_ControlMessage_HubPairingResponse_Status_kOk;
-  SendControlMessage(transport_, origin, msg);
+  SendPairingResponse(transport_, origin);
 }
 
 bool Hub::checkSupportedType(pb_size_t which_kind) {

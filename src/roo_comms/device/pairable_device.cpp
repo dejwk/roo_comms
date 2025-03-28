@@ -169,13 +169,7 @@ void PairableDevice::setState(State new_state) {
 }
 
 void PairableDevice::sendBroadcastAnnounceMessage() {
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_discovery_request_tag;
-  msg.contents.hub_pairing_request.has_device_descriptor = true;
-  msg.contents.hub_discovery_request.device_descriptor = *device_descriptor_;
-
-  auto serialized = SerializeControlMessage(msg, roo_comms::kControlMagic);
-  transport_.broadcastAsync(serialized.data, serialized.size);
+  SendDiscoveryRequest(transport_, *device_descriptor_);
 }
 
 void PairableDevice::initPeer(const roo_io::MacAddress& peer_addr) {
@@ -183,12 +177,7 @@ void PairableDevice::initPeer(const roo_io::MacAddress& peer_addr) {
 }
 
 void PairableDevice::sendPairingRequestMessage() {
-  LOG(INFO) << "Sending pairing request message";
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_pairing_request_tag;
-  msg.contents.hub_pairing_request.has_device_descriptor = true;
-  msg.contents.hub_pairing_request.device_descriptor = *device_descriptor_;
-  roo_comms::SendEspNowControlMessage(*peer_, roo_comms::kControlMagic, msg);
+  SendPairingRequest(*peer_, *device_descriptor_);
 }
 
 void PairableDevice::processMessage(roo_comms::ReceivedMessage msg) {

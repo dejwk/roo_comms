@@ -9,6 +9,7 @@
 #include "esp_err.h"
 // #include "esp_now.h"
 #include "esp_now_transport.h"
+#include "roo_comms/pairing.h"
 #include "roo_control/selector/push_button.h"
 #include "roo_control/selector/selector.h"
 #include "roo_io/net/mac_address.h"
