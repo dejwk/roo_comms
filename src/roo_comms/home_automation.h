@@ -22,4 +22,11 @@ bool RequestRelayState(EspNowTransport& transport,
 bool WriteRelay(EspNowTransport& transport, const roo_io::MacAddress& device,
                 int relay_idx, bool is_enabled);
 
+roo_comms_DeviceDescriptor BuildHomeAutomationDescriptor(
+    const roo_comms_HomeAutomationDeviceDescriptor& input);
+
+bool TryParseHomeAutomationDescriptor(
+    const roo_comms_DeviceDescriptor& input,
+    roo_comms_HomeAutomationDeviceDescriptor& result);
+
 }  // namespace roo_comms

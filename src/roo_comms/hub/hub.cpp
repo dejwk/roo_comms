@@ -17,13 +17,13 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
 void Hub::processDiscoveryRequest(
     const roo_io::MacAddress &origin,
     const roo_comms_DeviceDescriptor &descriptor) {
-  if (!checkSupportedType(descriptor.which_kind)) return;
+  if (!checkSupportedType(descriptor)) return;
   SendDiscoveryResponse(transport_, origin);
 }
 
 void Hub::processPairingRequest(const roo_io::MacAddress &origin,
                                 const roo_comms_DeviceDescriptor &descriptor) {
-  if (!checkSupportedType(descriptor.which_kind)) return;
+  if (!checkSupportedType(descriptor)) return;
   if (!addTransceiver(origin, descriptor)) {
     LOG(WARNING) << "Failed to add transceiver " << origin;
     return;
@@ -31,11 +31,19 @@ void Hub::processPairingRequest(const roo_io::MacAddress &origin,
   SendPairingResponse(transport_, origin);
 }
 
-bool Hub::checkSupportedType(pb_size_t which_kind) {
-  if (which_kind != roo_comms_DeviceDescriptor_environmental_sensor_tag &&
-      which_kind != roo_comms_DeviceDescriptor_relay_tag) {
+bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor &descriptor) {
+  if (descriptor.realm_id != roo_comms_RealmId_kHomeAutomation) return false;
+  roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+  if (!TryParseHomeAutomationDescriptor(descriptor,
+                                        home_automation_descriptor)) {
+    return false;
+  }
+  auto kind = home_automation_descriptor.which_kind;
+  if (kind !=
+          roo_comms_HomeAutomationDeviceDescriptor_environmental_sensor_tag &&
+      kind != roo_comms_HomeAutomationDeviceDescriptor_relay_tag) {
     LOG(INFO) << "Ignoring pairing request from unsupported transceiver type "
-              << which_kind;
+              << kind;
     return false;
   }
   return true;
@@ -228,14 +236,13 @@ roo_comms_DeviceDescriptor *Hub::lookupDescriptor(
   return (itr != transceiver_details_.end()) ? nullptr : &itr->second;
 }
 
-TransceiverHub::TransceiverHub(EspNowTransport &transport,
-                               roo_scheduler::Scheduler &scheduler)
-    : hub_(
+Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler)
+    : Hub(
           transport, scheduler,
           [this](const Receiver::Message &msg) { processDataMessage(msg); },
           [this]() { notifyTransceiversChanged(); }) {}
 
-void TransceiverHub::processDataMessage(const Receiver::Message &msg) {
+void Hub::processDataMessage(const Receiver::Message &msg) {
   // Cache the payload so that we can report values from it when asked.
   // For now, all devices send their full state in a single message, so no
   // merging is necessary.
@@ -265,23 +272,20 @@ bool ParseMac(const roo_transceivers::DeviceLocator &loc,
 }
 }  // namespace
 
-size_t TransceiverHub::deviceCount() const { return hub_.deviceCount(); }
-
-bool TransceiverHub::forEachDevice(
+bool Hub::forEachDevice(
     std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
     const {
-  for (size_t i = 0; i < hub_.deviceCount(); ++i) {
-    if (!callback(device(i))) {
+  for (size_t i = 0; i < deviceCount(); ++i) {
+    if (!callback(device_locator(i))) {
       return false;
     }
   }
   return true;
 }
 
-roo_transceivers::DeviceLocator TransceiverHub::device(
-    size_t device_idx) const {
+roo_transceivers::DeviceLocator Hub::device_locator(size_t device_idx) const {
   char buf[18];
-  hub_.device(device_idx).writeStringTo(buf);
+  device(device_idx).writeStringTo(buf);
   return roo_transceivers::DeviceLocator(kEspNowSchema, buf);
 }
 
@@ -292,8 +296,9 @@ static const char *kAht20Humidity = "aht20_humidity";
 static const char *kBmp280Temperature = "bmp280_temperature";
 static const char *kBmp280Pressure = "bmp280_pressure";
 
-void BuildEnvironmentalSensorDescriptor(const roo_comms_DeviceDescriptor &input,
-                                        roo_transceivers_Descriptor &result) {
+void BuildEnvironmentalSensorDescriptor(
+    const roo_comms_HomeAutomationDeviceDescriptor &input,
+    roo_transceivers_Descriptor &result) {
   result.actuators_count = 0;
   size_t sensor_idx = 0;
   if (input.kind.environmental_sensor.has_aht20) {
@@ -350,7 +355,7 @@ roo_transceivers::Measurement ReadEnvironmentalSensor(
   return roo_transceivers::Measurement();
 }
 
-void BuildRelayDescriptor(const roo_comms_DeviceDescriptor &input,
+void BuildRelayDescriptor(const roo_comms_HomeAutomationDeviceDescriptor &input,
                           roo_transceivers_Descriptor &result) {
   size_t relay_count = input.kind.relay.port_count;
   result.sensors_count = relay_count;
@@ -397,24 +402,26 @@ bool WriteRelayUniversal(EspNowTransport &transport,
 
 }  // namespace
 
-bool TransceiverHub::getDeviceDescriptor(
-    const roo_transceivers::DeviceLocator &locator,
-    roo_transceivers_Descriptor &descriptor) const {
+bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator &locator,
+                              roo_transceivers_Descriptor &descriptor) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator, addr)) return false;
   LOG(INFO) << "Parsed mac: " << addr;
-  const roo_comms_DeviceDescriptor *raw = hub_.lookupDescriptor(addr);
+  const roo_comms_DeviceDescriptor *raw = lookupDescriptor(addr);
   if (raw == nullptr) {
     LOG(WARNING) << "Did not find a descriptor for " << addr;
     return false;
   }
-  switch (raw->which_kind) {
-    case roo_comms_DeviceDescriptor_environmental_sensor_tag: {
-      BuildEnvironmentalSensorDescriptor(*raw, descriptor);
+  roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+  CHECK(TryParseHomeAutomationDescriptor(*raw, home_automation_descriptor));
+  switch (home_automation_descriptor.which_kind) {
+    case roo_comms_HomeAutomationDeviceDescriptor_environmental_sensor_tag: {
+      BuildEnvironmentalSensorDescriptor(home_automation_descriptor,
+                                         descriptor);
       return true;
     }
-    case roo_comms_DeviceDescriptor_relay_tag: {
-      BuildRelayDescriptor(*raw, descriptor);
+    case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
+      BuildRelayDescriptor(home_automation_descriptor, descriptor);
       return true;
     }
     default: {
@@ -423,24 +430,27 @@ bool TransceiverHub::getDeviceDescriptor(
   }
 }
 
-roo_transceivers::Measurement TransceiverHub::read(
+roo_transceivers::Measurement Hub::read(
     const roo_transceivers::SensorLocator &locator) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator.device_locator(), addr)) {
     return roo_transceivers::Measurement();
   }
-  const roo_comms_DeviceDescriptor *descriptor = hub_.lookupDescriptor(addr);
+  const roo_comms_DeviceDescriptor *descriptor = lookupDescriptor(addr);
   if (descriptor == nullptr) return roo_transceivers::Measurement();
   const auto &itr = states_.find(addr);
   if (itr == states_.end()) {
     return roo_transceivers::Measurement();
   }
   const DeviceState &state = itr->second;
-  switch (descriptor->which_kind) {
-    case roo_comms_DeviceDescriptor_environmental_sensor_tag: {
+  roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+  CHECK(TryParseHomeAutomationDescriptor(*descriptor,
+                                         home_automation_descriptor));
+  switch (home_automation_descriptor.which_kind) {
+    case roo_comms_HomeAutomationDeviceDescriptor_environmental_sensor_tag: {
       return ReadEnvironmentalSensor(state, locator.sensor_id());
     }
-    case roo_comms_DeviceDescriptor_relay_tag: {
+    case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
       return ReadRelay(state, locator.sensor_id());
     }
     default: {
@@ -449,21 +459,24 @@ roo_transceivers::Measurement TransceiverHub::read(
   }
 }
 
-bool TransceiverHub::write(const roo_transceivers::ActuatorLocator &locator,
-                           float value) const {
+bool Hub::write(const roo_transceivers::ActuatorLocator &locator,
+                float value) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator.device_locator(), addr)) {
     return false;
   }
-  const roo_comms_DeviceDescriptor *descriptor = hub_.lookupDescriptor(addr);
+  const roo_comms_DeviceDescriptor *descriptor = lookupDescriptor(addr);
   if (descriptor == nullptr) return false;
-  switch (descriptor->which_kind) {
-    case roo_comms_DeviceDescriptor_environmental_sensor_tag: {
+  roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+  CHECK(TryParseHomeAutomationDescriptor(*descriptor,
+                                         home_automation_descriptor));
+  switch (home_automation_descriptor.which_kind) {
+    case roo_comms_HomeAutomationDeviceDescriptor_environmental_sensor_tag: {
       // These have no actuators.
       return false;
     }
-    case roo_comms_DeviceDescriptor_relay_tag: {
-      WriteRelayUniversal(hub_.transport(), addr, locator.actuator_id(), value);
+    case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
+      WriteRelayUniversal(transport_, addr, locator.actuator_id(), value);
       return true;
     }
     default: {
@@ -474,15 +487,18 @@ bool TransceiverHub::write(const roo_transceivers::ActuatorLocator &locator,
   return false;
 }
 
-void TransceiverHub::requestUpdate() {
-  size_t count = hub_.deviceCount();
+void Hub::requestUpdate() {
+  size_t count = deviceCount();
   for (size_t i = 0; i < count; ++i) {
-    const roo_io::MacAddress &addr = hub_.device(i);
-    const roo_comms_DeviceDescriptor *descriptor = hub_.lookupDescriptor(addr);
+    const roo_io::MacAddress &addr = device(i);
+    const roo_comms_DeviceDescriptor *descriptor = lookupDescriptor(addr);
     if (descriptor == nullptr) continue;
-    switch (descriptor->which_kind) {
-      case roo_comms_DeviceDescriptor_relay_tag: {
-        RequestRelayState(hub_.transport(), addr);
+    roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+    CHECK(TryParseHomeAutomationDescriptor(*descriptor,
+                                           home_automation_descriptor));
+    switch (home_automation_descriptor.which_kind) {
+      case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
+        RequestRelayState(transport(), addr);
         break;
       }
       default: {
@@ -492,23 +508,21 @@ void TransceiverHub::requestUpdate() {
   }
 }
 
-void TransceiverHub::addEventListener(
-    roo_transceivers::EventListener *listener) {
+void Hub::addEventListener(roo_transceivers::EventListener *listener) {
   listeners_.insert(listener);
 }
 
-void TransceiverHub::removeEventListener(
-    roo_transceivers::EventListener *listener) {
+void Hub::removeEventListener(roo_transceivers::EventListener *listener) {
   listeners_.erase(listener);
 }
 
-void TransceiverHub::notifyTransceiversChanged() {
+void Hub::notifyTransceiversChanged() {
   for (auto *listener : listeners_) {
     listener->devicesChanged();
   }
 }
 
-void TransceiverHub::notifyNewReadingsAvailable() {
+void Hub::notifyNewReadingsAvailable() {
   for (auto *listener : listeners_) {
     listener->newReadingsAvailable();
   }

@@ -59,4 +59,25 @@ bool WriteRelay(EspNowTransport& transport, const roo_io::MacAddress& device,
   return transport.sendOnce(device, serialized.data, serialized.size);
 }
 
+roo_comms_DeviceDescriptor BuildHomeAutomationDescriptor(
+    const roo_comms_HomeAutomationDeviceDescriptor& input) {
+  roo_comms_DeviceDescriptor result = roo_comms_DeviceDescriptor_init_zero;
+  result.realm_id = roo_comms_RealmId_kHomeAutomation;
+  pb_ostream_t stream = pb_ostream_from_buffer(result.payload.bytes, 128);
+  CHECK(pb_encode(&stream, roo_comms_HomeAutomationDeviceDescriptor_fields,
+                  &input));
+  result.payload.size = stream.bytes_written;
+  return result;
+}
+
+bool TryParseHomeAutomationDescriptor(
+    const roo_comms_DeviceDescriptor& input,
+    roo_comms_HomeAutomationDeviceDescriptor& result) {
+  result = roo_comms_HomeAutomationDeviceDescriptor_init_zero;
+  pb_istream_t stream =
+      pb_istream_from_buffer(input.payload.bytes, input.payload.size);
+  return pb_decode(&stream, roo_comms_HomeAutomationDeviceDescriptor_fields,
+                   &result);
+}
+
 }  // namespace roo_comms

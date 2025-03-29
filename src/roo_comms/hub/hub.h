@@ -13,10 +13,17 @@
 
 namespace roo_comms {
 
-class Hub {
+struct DeviceState {
+  roo_time::Uptime last_reading;
+  roo_comms_DataMessage last_payload;
+};
+
+class Hub : public roo_transceivers::Universe {
  public:
   using PayloadCb = std::function<void(const roo_comms::Receiver::Message &)>;
   using TransceiverChangedCb = std::function<void()>;
+
+  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler);
 
   Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
       PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb);
@@ -37,62 +44,6 @@ class Hub {
   roo_comms_DeviceDescriptor *lookupDescriptor(const roo_io::MacAddress &addr);
 
   EspNowTransport &transport() { return transport_; }
-
- private:
-  friend class TransceiverHub;
-
-  void processMessage(const roo_comms::Receiver::Message& received);
-
-  void processDiscoveryRequest(const roo_io::MacAddress &origin,
-                               const roo_comms_DeviceDescriptor &descriptor);
-
-  void processPairingRequest(const roo_io::MacAddress &origin,
-                             const roo_comms_DeviceDescriptor &descriptor);
-
-  bool checkSupportedType(pb_size_t which_kind);
-
-  bool addTransceiver(const roo_io::MacAddress &addr,
-                      const roo_comms_DeviceDescriptor &descriptor);
-
-  bool removeTransceiver(const roo_io::MacAddress &addr);
-
-  bool hasTransceiver(const roo_io::MacAddress &addr);
-
-  void writeTransceiverAddresses(roo_prefs::Transaction &t);
-
-  roo_prefs::Collection store_;
-  EspNowTransport &transport_;
-  roo_comms::Receiver receiver_;
-
-  PayloadCb payload_cb_;
-  TransceiverChangedCb transceiver_changed_cb_;
-
-  std::vector<roo_io::MacAddress> transceiver_addresses_;
-
-  roo_collections::FlatSmallHashMap<roo_io::MacAddress,
-                                    roo_comms_DeviceDescriptor>
-      transceiver_details_;
-
-  //   std::function<void(std::string)> send_notify_;
-};
-
-struct DeviceState {
-  roo_time::Uptime last_reading;
-  roo_comms_DataMessage last_payload;
-};
-
-class TransceiverHub : public roo_transceivers::Universe {
- public:
-  TransceiverHub(EspNowTransport &transport,
-                 roo_scheduler::Scheduler &scheduler);
-
-  void init(uint8_t channel) { hub_.init(channel); }
-
-  void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-    hub_.onDataRecv(mac, incomingData, len);
-  }
-
-  size_t deviceCount() const override;
 
   bool forEachDevice(
       std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
@@ -117,18 +68,51 @@ class TransceiverHub : public roo_transceivers::Universe {
   void setRelay(int idx, bool is_enabled);
 
  private:
-  roo_transceivers::DeviceLocator device(size_t device_idx) const;
+  void processMessage(const roo_comms::Receiver::Message &received);
+
+  void processDiscoveryRequest(const roo_io::MacAddress &origin,
+                               const roo_comms_DeviceDescriptor &descriptor);
+
+  void processPairingRequest(const roo_io::MacAddress &origin,
+                             const roo_comms_DeviceDescriptor &descriptor);
+
+  bool checkSupportedType(const roo_comms_DeviceDescriptor &descriptor);
+
+  bool addTransceiver(const roo_io::MacAddress &addr,
+                      const roo_comms_DeviceDescriptor &descriptor);
+
+  bool removeTransceiver(const roo_io::MacAddress &addr);
+
+  bool hasTransceiver(const roo_io::MacAddress &addr);
+
+  void writeTransceiverAddresses(roo_prefs::Transaction &t);
+
+  roo_transceivers::DeviceLocator device_locator(size_t device_idx) const;
 
   void processDataMessage(const Receiver::Message &msg);
 
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();
 
-  mutable Hub hub_;
   roo_collections::FlatSmallHashMap<roo_io::MacAddress, DeviceState> states_;
 
   roo_collections::FlatSmallHashSet<roo_transceivers::EventListener *>
       listeners_;
+
+  roo_prefs::Collection store_;
+  EspNowTransport &transport_;
+  roo_comms::Receiver receiver_;
+
+  PayloadCb payload_cb_;
+  TransceiverChangedCb transceiver_changed_cb_;
+
+  std::vector<roo_io::MacAddress> transceiver_addresses_;
+
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress,
+                                    roo_comms_DeviceDescriptor>
+      transceiver_details_;
+
+  //   std::function<void(std::string)> send_notify_;
 };
 
 }  // namespace roo_comms

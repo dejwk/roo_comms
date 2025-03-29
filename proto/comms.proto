@@ -1,8 +1,22 @@
 syntax = "proto3";
 
+import "nanopb.proto";
+
 package roo.comms;
 
+enum RealmId {
+  kUnspecifiedRealm = 0;
+  kHomeAutomation = 1;
+  // Values up to 1023 are reserved for future use.
+  // You can use values 1024+ for custom realms.
+}
+
 message DeviceDescriptor {
+  int64 realm_id = 1;
+  bytes payload = 2 [ (nanopb).max_size = 128 ];
+}
+
+message HomeAutomationDeviceDescriptor {
   message EnvironmentalSensor {
     bool has_aht20 = 1;
     bool has_bmp280 = 2;
