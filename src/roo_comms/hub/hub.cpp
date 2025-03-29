@@ -80,8 +80,7 @@ void Hub::processMessage(const roo_comms::Receiver::Message &received) {
   }
 }
 
-Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
-         PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb)
+Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler)
     : store_("hub"),
       transport_(transport),
       receiver_(
@@ -90,8 +89,9 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
             processMessage(received);
           },
           100, 8, 256, nullptr),
-      payload_cb_(payload_cb),
-      transceiver_changed_cb_(transceiver_changed_cb) {}
+      payload_cb_(
+          [this](const Receiver::Message &msg) { processDataMessage(msg); }),
+      transceiver_changed_cb_([this]() { notifyTransceiversChanged(); }) {}
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
@@ -235,12 +235,6 @@ roo_comms_DeviceDescriptor *Hub::lookupDescriptor(
   auto itr = transceiver_details_.find(addr);
   return (itr != transceiver_details_.end()) ? nullptr : &itr->second;
 }
-
-Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler)
-    : Hub(
-          transport, scheduler,
-          [this](const Receiver::Message &msg) { processDataMessage(msg); },
-          [this]() { notifyTransceiversChanged(); }) {}
 
 void Hub::processDataMessage(const Receiver::Message &msg) {
   // Cache the payload so that we can report values from it when asked.
@@ -498,7 +492,7 @@ void Hub::requestUpdate() {
                                            home_automation_descriptor));
     switch (home_automation_descriptor.which_kind) {
       case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
-        RequestRelayState(transport(), addr);
+        RequestRelayState(transport_, addr);
         break;
       }
       default: {

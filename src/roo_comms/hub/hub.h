@@ -6,6 +6,7 @@
 #include "roo_backport.h"
 #include "roo_collections/flat_small_hash_map.h"
 #include "roo_comms/home_automation.h"
+#include "roo_comms/hub/hub_device_factory.h"
 #include "roo_comms/pairing.h"
 #include "roo_io/net/mac_address.h"
 #include "roo_prefs.h"
@@ -25,9 +26,6 @@ class Hub : public roo_transceivers::Universe {
 
   Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler);
 
-  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
-      PayloadCb payload_cb, TransceiverChangedCb transceiver_changed_cb);
-
   void init(uint8_t channel);
 
   void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
@@ -42,8 +40,6 @@ class Hub : public roo_transceivers::Universe {
       const roo_io::MacAddress &addr) const;
 
   roo_comms_DeviceDescriptor *lookupDescriptor(const roo_io::MacAddress &addr);
-
-  EspNowTransport &transport() { return transport_; }
 
   bool forEachDevice(
       std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
@@ -102,6 +98,8 @@ class Hub : public roo_transceivers::Universe {
   roo_prefs::Collection store_;
   EspNowTransport &transport_;
   roo_comms::Receiver receiver_;
+
+  std::unique_ptr<HubDeviceFactory> device_factory_;
 
   PayloadCb payload_cb_;
   TransceiverChangedCb transceiver_changed_cb_;
