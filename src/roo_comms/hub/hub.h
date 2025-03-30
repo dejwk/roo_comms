@@ -5,7 +5,6 @@
 #include "esp_now_transport.h"
 #include "roo_backport.h"
 #include "roo_collections/flat_small_hash_map.h"
-#include "roo_comms/home_automation.h"
 #include "roo_comms/hub/hub_device_factory.h"
 #include "roo_comms/pairing.h"
 #include "roo_io/net/mac_address.h"
@@ -24,7 +23,8 @@ class Hub : public roo_transceivers::Universe {
   using PayloadCb = std::function<void(const roo_comms::Receiver::Message &)>;
   using TransceiverChangedCb = std::function<void()>;
 
-  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler);
+  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
+      HubDeviceFactory &device_factory);
 
   void init(uint8_t channel);
 
@@ -36,10 +36,10 @@ class Hub : public roo_transceivers::Universe {
     return transceiver_addresses_[idx];
   }
 
-  const roo_comms_DeviceDescriptor *lookupDescriptor(
-      const roo_io::MacAddress &addr) const;
-
-  roo_comms_DeviceDescriptor *lookupDescriptor(const roo_io::MacAddress &addr);
+  HubDevice *lookupDevice(const roo_io::MacAddress &addr) const {
+    auto itr = devices_.find(addr);
+    return (itr != devices_.end()) ? itr->second.get() : nullptr;
+  }
 
   bool forEachDevice(
       std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
@@ -99,18 +99,15 @@ class Hub : public roo_transceivers::Universe {
   EspNowTransport &transport_;
   roo_comms::Receiver receiver_;
 
-  std::unique_ptr<HubDeviceFactory> device_factory_;
+  HubDeviceFactory &device_factory_;
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress,
+                                    std::unique_ptr<HubDevice>>
+      devices_;
 
   PayloadCb payload_cb_;
   TransceiverChangedCb transceiver_changed_cb_;
 
   std::vector<roo_io::MacAddress> transceiver_addresses_;
-
-  roo_collections::FlatSmallHashMap<roo_io::MacAddress,
-                                    roo_comms_DeviceDescriptor>
-      transceiver_details_;
-
-  //   std::function<void(std::string)> send_notify_;
 };
 
 }  // namespace roo_comms

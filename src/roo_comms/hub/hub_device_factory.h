@@ -10,6 +10,9 @@ class HubDeviceFactory {
  public:
   virtual ~HubDeviceFactory() = default;
 
+  virtual bool isDeviceSupported(
+      const roo_comms_DeviceDescriptor& descriptor) const = 0;
+
   virtual std::unique_ptr<HubDevice> createDevice(
       EspNowTransport& transport, const roo_io::MacAddress& destination,
       const roo_comms_DeviceDescriptor& descriptor) const = 0;

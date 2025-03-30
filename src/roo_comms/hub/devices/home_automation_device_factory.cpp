@@ -8,6 +8,11 @@
 
 namespace roo_comms {
 
+bool HomeAutomationDeviceFactory::isDeviceSupported(
+    const roo_comms_DeviceDescriptor& descriptor) const {
+  return (descriptor.realm_id == roo_comms_RealmId_kHomeAutomation);
+}
+
 std::unique_ptr<HubDevice> HomeAutomationDeviceFactory::createDevice(
     EspNowTransport& transport, const roo_io::MacAddress& destination,
     const roo_comms_DeviceDescriptor& descriptor) const {
