@@ -31,7 +31,7 @@ SerializedHomeAutomationDataMessage SerializeHomeAutomationDataMessage(
       pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
   bool status = pb_encode(&stream, roo_comms_DataMessage_fields, &msg);
   if (status) {
-    result.size = stream.bytes_written;
+    result.size = stream.bytes_written + 8;
   } else {
     LOG(ERROR) << "Encoding failed: " << PB_GET_ERROR(&stream);
     result.size = 0;

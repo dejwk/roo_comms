@@ -22,7 +22,7 @@ SerializedControlMessage SerializeControlMessage(
       pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
   bool status = pb_encode(&stream, roo_comms_ControlMessage_fields, &msg);
   if (status) {
-    result.size = stream.bytes_written;
+    result.size = stream.bytes_written + 8;
   } else {
     LOG(ERROR) << "Encoding failed: " << PB_GET_ERROR(&stream);
     result.size = 0;
@@ -41,7 +41,7 @@ bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
   pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
   bool status = pb_decode(&stream, roo_comms_ControlMessage_fields, &msg);
   if (!status) {
-    LOG(ERROR) << "Received a malformed message " << PB_GET_ERROR(&stream);
+    LOG(ERROR) << "Received a malformed message: " << PB_GET_ERROR(&stream);
     return false;
   }
   return true;
