@@ -3,6 +3,10 @@
 #include "esp_err.h"
 #include "esp_wifi.h"
 
+#if !defined(MLOG_roo_esp_now_transport)
+#define MLOG_roo_esp_now_transport 0
+#endif
+
 namespace roo_comms {
 
 void EspNowTransport::setChannel(uint8_t channel) {
@@ -33,10 +37,12 @@ bool EspNowPeer::sendAsync(const void* data, size_t len) {
 
 bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
                            size_t len) {
+  roo_io::MacAddress addr(peer.peer_.peer_addr);
   while (true) {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
-    Counter& pending = pending_[roo_io::MacAddress(peer.peer_.peer_addr)];
-    if (pending.count == 0) {
+    Outbox& pending = pending_[addr];
+    if (pending.count == 0 || pending.status == Outbox::kDone) {
+      pending.status = Outbox::kSyncPending;
       ++pending.count;
       break;
     }
@@ -44,27 +50,51 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   }
   esp_err_t result =
       esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
-  if (result == ESP_OK) {
-    LOG(INFO) << "Packet seding: " << roo_io::MacAddress(peer.peer_.peer_addr);
-    return true;
-  } else {
+  if (result != ESP_OK) {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
     return false;
+  }
+  while (true) {
+    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    Outbox& pending = pending_[addr];
+    if (pending.status == Outbox::kSyncSuccessful) {
+      pending_.erase(addr);
+      return true;
+    } else if (pending.status == Outbox::kSyncFailed) {
+      pending_.erase(addr);
+      return false;
+    } else if (pending.count == 0) {
+      LOG(ERROR) << "Unexpected status: " << pending.status;
+      pending_.erase(addr);
+      return false;
+    }
+    pending_emptied_.wait(lock);
   }
 }
 
 bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
                                 size_t len) {
-  {
-    std::lock_guard<std::mutex> lock(pending_send_mutex_);
-    Counter& pending = pending_[roo_io::MacAddress(peer.peer_.peer_addr)];
-    pending.count++;
+  while (true) {
+    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    Outbox& pending = pending_[roo_io::MacAddress(peer.peer_.peer_addr)];
+    if (pending.status == Outbox::kDone ||
+        pending.status == Outbox::kAsyncPending) {
+      pending.status = Outbox::kAsyncPending;
+      ++pending.count;
+      break;
+    }
+    // If there are any synchronous requests, wait for them to finish before
+    // sending new async requests. This is so that we can attribute delivery
+    // failures properly.
+    pending_emptied_.wait(lock);
   }
   esp_err_t result =
       esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
   if (result == ESP_OK) {
-    LOG(INFO) << "Packet seding: " << roo_io::MacAddress(peer.peer_.peer_addr);
+    MLOG(roo_esp_now_transport)
+        << "Sending packet of " << len
+        << " bytes to: " << roo_io::MacAddress(peer.peer_.peer_addr);
     return true;
   } else {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
@@ -88,14 +118,29 @@ void EspNowTransport::broadcastAsync(const void* data, size_t len) {
 }
 
 void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
-  LOG(INFO) << "Delivery status: " << success;
+  MLOG(roo_esp_now_transport)
+      << "Delivery status for " << addr << ": " << success;
   std::lock_guard<std::mutex> lock(pending_send_mutex_);
-  Counter& pending = pending_[addr];
+  Outbox& pending = pending_[addr];
   CHECK_GT(pending.count, 0);
   if (--pending.count == 0) {
-    pending_.erase(addr);
+    switch (pending.status) {
+      case Outbox::kAsyncPending: {
+        pending_.erase(addr);
+        break;
+      }
+      case Outbox::kSyncPending: {
+        pending.status =
+            success ? Outbox::kSyncSuccessful : Outbox::kSyncFailed;
+        break;
+      }
+      default: {
+        LOG(ERROR) << "Unexpected status: " << (int)pending.status;
+        pending_.erase(addr);
+      }
+    }
     pending_emptied_.notify_all();
-    LOG(INFO) << "No more calls pending per " << addr;
+    MLOG(roo_esp_now_transport) << "No more calls pending for " << addr;
   };
 }
 

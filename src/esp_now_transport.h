@@ -54,14 +54,22 @@ class EspNowTransport {
   void ackSent(const roo_io::MacAddress& addr, bool success);
 
  private:
-  struct Counter {
-    Counter() : count(0) {}
+  struct Outbox {
+    enum Status {
+      kDone,
+      kAsyncPending,
+      kSyncPending,
+      kSyncSuccessful,
+      kSyncFailed
+    };
+    Outbox() : status(kDone), count(0) {}
+    Status status;
     int count;
   };
   friend class EspNowPeer;
   std::mutex pending_send_mutex_;
   std::condition_variable pending_emptied_;
-  roo_collections::FlatSmallHashMap<roo_io::MacAddress, Counter> pending_;
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress, Outbox> pending_;
 
   uint8_t channel_;
 };
@@ -108,16 +116,23 @@ class Receiver {
       : queue_([this]() { processor_.scheduleNow(); }),
         processor_fn_(std::move(processor_fn)),
         validator_fn_(std::move(validator_fn)),
-        processor_(scheduler, [this]() { processMessages(); }) {}
+        processor_(scheduler, [this]() { processMessages(); }),
+        max_quqeue_size_(max_queue_size),
+        min_msg_size_(min_msg_size),
+        max_msg_size_(max_msg_size) {}
 
   void handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
               size_t len) {
+    LOG(INFO) << "Received message of size " << len << " from "
+              << roo_io::MacAddress(mac_addr);
     if (len < min_msg_size_) {
-      LOG(WARNING) << "Received bogus message (too short); ignoring";
+      LOG(WARNING) << "Received bogus message (too short: " << len
+                   << " bytes); ignoring";
       return;
     }
     if (len > max_msg_size_) {
-      LOG(WARNING) << "Received bogus message (too large); ignoring";
+      LOG(WARNING) << "Received bogus message (too large: " << len
+                   << " bytes); ignoring";
       return;
     }
     if (queue_.size() >= max_quqeue_size_) {
