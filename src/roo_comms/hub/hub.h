@@ -13,11 +13,6 @@
 
 namespace roo_comms {
 
-struct DeviceState {
-  roo_time::Uptime last_reading;
-  roo_comms_DataMessage last_payload;
-};
-
 class Hub : public roo_transceivers::Universe {
  public:
   using PayloadCb = std::function<void(const roo_comms::Receiver::Message &)>;
@@ -89,8 +84,6 @@ class Hub : public roo_transceivers::Universe {
 
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();
-
-  roo_collections::FlatSmallHashMap<roo_io::MacAddress, DeviceState> states_;
 
   roo_collections::FlatSmallHashSet<roo_transceivers::EventListener *>
       listeners_;
