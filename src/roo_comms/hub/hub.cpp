@@ -18,6 +18,14 @@ void Hub::processDiscoveryRequest(
     const roo_io::MacAddress &origin,
     const roo_comms_DeviceDescriptor &descriptor) {
   if (!checkSupportedType(descriptor)) return;
+  std::unique_ptr<HubDevice> device =
+      device_factory_.createDevice(transport_, origin, descriptor);
+  if (device == nullptr) {
+    LOG(WARNING) << "Factory failed to create device for " << origin;
+    return;
+  }
+  roo_transceivers_Descriptor generic_descriptor;
+  device->getDescriptor(generic_descriptor);
   SendDiscoveryResponse(transport_, origin);
 }
 

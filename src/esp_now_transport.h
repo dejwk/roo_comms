@@ -63,6 +63,7 @@ class EspNowTransport {
       kSyncFailed
     };
     Outbox() : status(kDone), count(0) {}
+    Outbox(Status status) : status(status), count(1) {}
     Status status;
     int count;
   };

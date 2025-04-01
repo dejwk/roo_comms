@@ -40,10 +40,9 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   roo_io::MacAddress addr(peer.peer_.peer_addr);
   while (true) {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
-    Outbox& pending = pending_[addr];
-    if (pending.count == 0 || pending.status == Outbox::kDone) {
-      pending.status = Outbox::kSyncPending;
-      ++pending.count;
+    auto itr = pending_.find(addr);
+    if (itr == pending_.end()) {
+      pending_[addr] = Outbox(Outbox::kSyncPending);
       break;
     }
     pending_emptied_.wait(lock);
@@ -53,8 +52,12 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   if (result != ESP_OK) {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
+    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    pending_.erase(addr);
+    pending_emptied_.wait(lock);
     return false;
   }
+  // Wait for the send to be acknowledged.
   while (true) {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
     Outbox& pending = pending_[addr];
@@ -69,21 +72,25 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
       pending_.erase(addr);
       return false;
     }
+    CHECK_EQ(pending.status, Outbox::kSyncPending);
     pending_emptied_.wait(lock);
   }
 }
 
 bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
                                 size_t len) {
+  roo_io::MacAddress addr(peer.peer_.peer_addr);
   while (true) {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
-    Outbox& pending = pending_[roo_io::MacAddress(peer.peer_.peer_addr)];
-    if (pending.status == Outbox::kDone ||
-        pending.status == Outbox::kAsyncPending) {
-      pending.status = Outbox::kAsyncPending;
-      ++pending.count;
+    auto itr = pending_.find(addr);
+    if (itr == pending_.end()) {
+      pending_[addr] = Outbox(Outbox::kAsyncPending);
+      break;
+    } else if (itr->second.status == Outbox::kAsyncPending) {
+      itr->second.count++;
       break;
     }
+
     // If there are any synchronous requests, wait for them to finish before
     // sending new async requests. This is so that we can attribute delivery
     // failures properly.
@@ -93,12 +100,19 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
       esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
   if (result == ESP_OK) {
     MLOG(roo_esp_now_transport)
-        << "Sending packet of " << len
-        << " bytes to: " << roo_io::MacAddress(peer.peer_.peer_addr);
+        << "Sending packet of " << len << " bytes to: " << addr;
     return true;
   } else {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
+    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    Outbox& pending = pending_[addr];
+    CHECK_EQ(Outbox::kAsyncPending, pending.status);
+    pending.count--;
+    if (pending.count == 0) {
+      pending_.erase(addr);
+      pending_emptied_.wait(lock);
+    }
     return false;
   }
 }
