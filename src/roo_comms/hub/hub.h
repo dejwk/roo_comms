@@ -104,9 +104,6 @@ class Hub : public roo_transceivers::Universe {
                                     std::unique_ptr<HubDevice>>
       devices_;
 
-  PayloadCb payload_cb_;
-  TransceiverChangedCb transceiver_changed_cb_;
-
   std::vector<roo_io::MacAddress> transceiver_addresses_;
 };
 

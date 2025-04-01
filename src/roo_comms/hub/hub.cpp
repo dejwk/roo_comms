@@ -61,9 +61,7 @@ void Hub::processMessage(const roo_comms::Receiver::Message &received) {
       return;
     }
   }
-  if (payload_cb_ != nullptr) {
-    payload_cb_(received);
-  }
+  processDataMessage(received);
 }
 
 Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
@@ -76,10 +74,7 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
             processMessage(received);
           },
           100, 8, 256, nullptr),
-      device_factory_(device_factory),
-      payload_cb_(
-          [this](const Receiver::Message &msg) { processDataMessage(msg); }),
-      transceiver_changed_cb_([this]() { notifyTransceiversChanged(); }) {}
+      device_factory_(device_factory) {}
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
@@ -169,9 +164,7 @@ bool Hub::addTransceiver(const roo_io::MacAddress &addr,
     CHECK_EQ(t.store().writeBytes(addr_key, buf, ostream.bytes_written),
              roo_prefs::WRITE_OK);
   }
-  if (transceiver_changed_cb_ != nullptr) {
-    transceiver_changed_cb_();
-  }
+  notifyTransceiversChanged();
   return true;
 }
 
@@ -198,10 +191,7 @@ bool Hub::removeTransceiver(const roo_io::MacAddress &addr) {
   char addr_key[13];
   snprintf(addr_key, 13, "%012" PRIX64, addr.asU64());
   CHECK_EQ(t.store().clear(addr_key), roo_prefs::CLEAR_OK);
-
-  if (transceiver_changed_cb_ != nullptr) {
-    transceiver_changed_cb_();
-  }
+  notifyTransceiversChanged();
   return true;
 }
 
