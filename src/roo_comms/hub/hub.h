@@ -15,11 +15,12 @@ namespace roo_comms {
 
 class Hub : public roo_transceivers::Universe {
  public:
-  using PayloadCb = std::function<void(const roo_comms::Receiver::Message &)>;
-  using TransceiverChangedCb = std::function<void()>;
+  using PairingRequestCb =
+      std::function<void(const roo_transceivers::DeviceLocator &,
+                         const roo_transceivers_Descriptor &)>;
 
   Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
-      HubDeviceFactory &device_factory);
+      HubDeviceFactory &device_factory, PairingRequestCb pairing_request_cb);
 
   void init(uint8_t channel);
 
@@ -56,7 +57,8 @@ class Hub : public roo_transceivers::Universe {
 
   void removeEventListener(roo_transceivers::EventListener *listener) override;
 
-  void setRelay(int idx, bool is_enabled);
+  void approvePairing(const roo_transceivers::DeviceLocator &locator,
+                      const roo_transceivers_Descriptor &descriptor);
 
  private:
   void processMessage(const roo_comms::Receiver::Message &received);
@@ -78,8 +80,6 @@ class Hub : public roo_transceivers::Universe {
 
   void writeTransceiverAddresses(roo_prefs::Transaction &t);
 
-  roo_transceivers::DeviceLocator device_locator(size_t device_idx) const;
-
   void processDataMessage(const Receiver::Message &msg);
 
   void notifyTransceiversChanged();
@@ -98,6 +98,17 @@ class Hub : public roo_transceivers::Universe {
       devices_;
 
   std::vector<roo_io::MacAddress> transceiver_addresses_;
+
+  // Pending pairing requests that have been approved.
+  roo_collections::FlatSmallHashMap<roo_transceivers::DeviceLocator,
+                                    roo_transceivers_Descriptor>
+      approved_pairings_;
+
+  // Callback to be invoked when we receive a broadcast discovery request. It
+  // can be used to start interaction with a human, to check if we should
+  // respond to this request or ignore it. When the request gets approved, the
+  // `approvePairing` method should be called to complete the pairing process.
+  PairingRequestCb pairing_request_cb_;
 };
 
 }  // namespace roo_comms
