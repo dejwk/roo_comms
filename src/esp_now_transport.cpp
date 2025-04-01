@@ -38,14 +38,16 @@ bool EspNowPeer::sendAsync(const void* data, size_t len) {
 bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
                            size_t len) {
   roo_io::MacAddress addr(peer.peer_.peer_addr);
-  while (true) {
+  {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
-    auto itr = pending_.find(addr);
-    if (itr == pending_.end()) {
-      pending_[addr] = Outbox(Outbox::kSyncPending);
-      break;
+    while (true) {
+      auto itr = pending_.find(addr);
+      if (itr == pending_.end()) {
+        pending_[addr] = Outbox(Outbox::kSyncPending);
+        break;
+      }
+      pending_emptied_.wait(lock);
     }
-    pending_emptied_.wait(lock);
   }
   esp_err_t result =
       esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
@@ -58,25 +60,29 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
     return false;
   }
   // Wait for the send to be acknowledged.
-  while (true) {
+  // Note: since we released the mutex above, the ack may have already been
+  // delivered before we reacquire it. Therefore we check the state before
+  // waiting.
+  {
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
-    Outbox& pending = pending_[addr];
-    if (pending.status == Outbox::kSyncSuccessful) {
-      pending_.erase(addr);
-      pending_emptied_.notify_all();
-      return true;
-    } else if (pending.status == Outbox::kSyncFailed) {
-      pending_.erase(addr);
-      pending_emptied_.notify_all();
-      return false;
-    } else if (pending.count == 0) {
-      LOG(ERROR) << "Unexpected status: " << pending.status;
-      pending_.erase(addr);
-      pending_emptied_.notify_all();
-      return false;
+    bool is_success = false;
+    while (true) {
+      Outbox& pending = pending_[addr];
+      if (pending.status == Outbox::kSyncSuccessful) {
+        is_success = true;
+        break;
+      } else if (pending.status == Outbox::kSyncFailed) {
+        break;
+      } else if (pending.count == 0) {
+        LOG(ERROR) << "Unexpected status: " << pending.status;
+        break;
+      }
+      CHECK_EQ(pending.status, Outbox::kSyncPending);
+      pending_emptied_.wait(lock);
     }
-    CHECK_EQ(pending.status, Outbox::kSyncPending);
-    pending_emptied_.wait(lock);
+    pending_.erase(addr);
+    pending_emptied_.notify_all();
+    return is_success;
   }
 }
 
