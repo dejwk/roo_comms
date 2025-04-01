@@ -15,18 +15,18 @@ HubDeviceRelay::HubDeviceRelay(EspNowTransport& transport,
       last_reading_(roo_time::Uptime::Start()) {}
 
 void HubDeviceRelay::getDescriptor(
-    roo_transceivers_Descriptor& descriptor) const {
-  descriptor.actuators_count = relay_count_;
-  descriptor.sensors_count = relay_count_;
+    roo_transceivers_Descriptor& result) const {
+  result.actuators_count = relay_count_;
+  result.sensors_count = relay_count_;
   for (size_t i = 0; i < relay_count_; ++i) {
-    snprintf(descriptor.sensors[i].id, 24, "relay_%d", i + 1);
-    descriptor.sensors[i].quantity = roo_transceivers_Quantity_kBinaryState;
-    snprintf(descriptor.actuators[i].id, 24, "relay_%d", i + 1);
-    descriptor.actuators[i].quantity = roo_transceivers_Quantity_kBinaryState;
+    snprintf(result.sensors[i].id, 24, "relay_%d", i + 1);
+    result.sensors[i].quantity = roo_transceivers_Quantity_kBinaryState;
+    snprintf(result.actuators[i].id, 24, "relay_%d", i + 1);
+    result.actuators[i].quantity = roo_transceivers_Quantity_kBinaryState;
   }
 
-  strcpy(descriptor.actuators[0].id, "relay");
-  descriptor.actuators[0].quantity = roo_transceivers_Quantity_kBinaryState;
+  strcpy(result.actuators[0].id, "relay");
+  result.actuators[0].quantity = roo_transceivers_Quantity_kBinaryState;
 }
 
 namespace {

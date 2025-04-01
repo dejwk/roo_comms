@@ -13,7 +13,7 @@ class HubDeviceEnvironmentalSensor : public HubDevice {
       const roo_comms_HomeAutomationDeviceDescriptor_EnvironmentalSensor&
           descriptor);
 
-  void getDescriptor(roo_transceivers_Descriptor& descriptor) const override;
+  void getDescriptor(roo_transceivers_Descriptor& result) const override;
 
   roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const override;

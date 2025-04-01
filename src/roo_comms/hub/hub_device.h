@@ -17,7 +17,7 @@ class HubDevice {
 
   virtual ~HubDevice() = default;
 
-  virtual void getDescriptor(roo_transceivers_Descriptor& descriptor) const = 0;
+  virtual void getDescriptor(roo_transceivers_Descriptor& result) const = 0;
 
   virtual roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const = 0;

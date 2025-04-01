@@ -11,7 +11,7 @@ class HubDeviceRelay : public HubDevice {
   HubDeviceRelay(EspNowTransport& transport,
                  const roo_io::MacAddress& destination, int relay_count);
 
-  void getDescriptor(roo_transceivers_Descriptor& descriptor) const override;
+  void getDescriptor(roo_transceivers_Descriptor& result) const override;
 
   roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const override;
