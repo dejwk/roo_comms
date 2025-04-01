@@ -54,7 +54,7 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
                << (int)result;
     std::unique_lock<std::mutex> lock(pending_send_mutex_);
     pending_.erase(addr);
-    pending_emptied_.wait(lock);
+    pending_emptied_.notify_all();
     return false;
   }
   // Wait for the send to be acknowledged.
@@ -63,13 +63,16 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
     Outbox& pending = pending_[addr];
     if (pending.status == Outbox::kSyncSuccessful) {
       pending_.erase(addr);
+      pending_emptied_.notify_all();
       return true;
     } else if (pending.status == Outbox::kSyncFailed) {
       pending_.erase(addr);
+      pending_emptied_.notify_all();
       return false;
     } else if (pending.count == 0) {
       LOG(ERROR) << "Unexpected status: " << pending.status;
       pending_.erase(addr);
+      pending_emptied_.notify_all();
       return false;
     }
     CHECK_EQ(pending.status, Outbox::kSyncPending);
