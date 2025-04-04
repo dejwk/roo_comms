@@ -4,11 +4,11 @@ namespace roo_comms {
 
 Button::Button(roo_control::BinarySelector& selector,
                roo_scheduler::Scheduler& scheduler,
-               std::function<void()> long_pressed)
+               std::function<void(bool)> pressed)
     : roo_control::PushButton(selector),
       updater_(
           scheduler, [this]() { tick(); }, roo_time::Millis(10)),
-      long_pressed_(long_pressed) {}
+      pressed_(pressed) {}
 
 RgbLedSignaler::RgbLedSignaler(roo_led::RgbLed& led,
                                roo_scheduler::Scheduler& scheduler)
@@ -81,15 +81,19 @@ PairableDevice::PairableDevice(
           },
           100, 8, 256, nullptr),
       state_(kStartup),
-      button_(button, scheduler, [this]() { setState(kPairing); }) {}
+      button_(button, scheduler, [this](bool is_long_pressed) {
+        buttonPressed(is_long_pressed);
+      }) {}
 
 void PairableDevice::begin(bool wakeup) {
   if (wakeup) {
     state_ = kSleep;
   }
-
   button_.start();
+  restoreState();
+}
 
+void PairableDevice::restoreState() {
   roo_io::MacAddress peer_addr = getPeerAddress();
   if (peer_addr.asU64() != 0) {
     transport_.setChannel(peer_channel_.get());
@@ -103,6 +107,31 @@ void PairableDevice::begin(bool wakeup) {
 void PairableDevice::onDataRecv(const uint8_t* source_mac_addr,
                                 const uint8_t* incomingData, int len) {
   receiver_.handle(source_mac_addr, incomingData, len);
+}
+
+void PairableDevice::buttonPressed(bool is_long_press) {
+  LOG(INFO) << "Button pressed: " << is_long_press;
+  switch (state_) {
+    // case kStartup:
+    case kNotPaired:
+    case kPaired: {
+      if (is_long_press) {
+        setState(kPairing);
+      }
+      break;
+    }
+    case kPairing:
+    case kAwaitingPairingConfirmation: {
+      if (is_long_press) {
+        clearPeerAddress();
+      }
+      restoreState();
+      break;
+    }
+    default: {
+      // Ignore.
+    }
+  }
 }
 
 void PairableDevice::setState(State new_state) {

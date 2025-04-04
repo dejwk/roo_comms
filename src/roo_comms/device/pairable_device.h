@@ -28,16 +28,17 @@ class Button : public roo_control::PushButton {
  public:
   Button(roo_control::BinarySelector& selector,
          roo_scheduler::Scheduler& scheduler,
-         std::function<void()> long_pressed);
+         std::function<void(bool is_long_pressed)> pressed);
 
   void start() { updater_.start(); }
 
  protected:
-  void onLongPress() override { long_pressed_(); }
+  void onClick() override { pressed_(false); }
+  void onLongPress() override { pressed_(true); }
 
  private:
   roo_scheduler::RepetitiveTask updater_;
-  std::function<void()> long_pressed_;
+  std::function<void(bool)> pressed_;
 };
 
 class PairableDevice {
@@ -85,7 +86,12 @@ class PairableDevice {
                   int len);
 
  private:
+  void buttonPressed(bool is_long_press);
+
   void setState(State new_state);
+
+  // Sets the state to whatever was persisted (either paired or unpaired).
+  void restoreState();
 
   void sendBroadcastAnnounceMessage();
 
