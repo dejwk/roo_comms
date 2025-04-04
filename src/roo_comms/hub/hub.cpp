@@ -86,7 +86,8 @@ bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor &descriptor) {
 void Hub::processMessage(const roo_comms::Receiver::Message &received) {
   {
     roo_comms_ControlMessage msg;
-    if (TryParsingAsControlMessage(received.data.get(), received.size, msg)) {
+    if (TryParsingAsControlMessage((const uint8_t *)received.data.get(),
+                                   received.size, msg)) {
       switch (msg.which_contents) {
         case roo_comms_ControlMessage_hub_discovery_request_tag: {
           processDiscoveryRequest(
@@ -270,7 +271,7 @@ void Hub::processDataMessage(const Receiver::Message &msg) {
                  << msg.source.asString();
     return;
   }
-  device->updateState(msg.data.get(), msg.size);
+  device->updateState((const uint8_t *)msg.data.get(), msg.size);
 
   notifyNewReadingsAvailable();
 }

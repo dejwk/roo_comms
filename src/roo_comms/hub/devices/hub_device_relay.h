@@ -21,7 +21,7 @@ class HubDeviceRelay : public HubDevice {
 
   void requestUpdate() const override;
 
-  void updateState(const roo::byte* data, size_t len) override;
+  void updateState(const uint8_t* data, size_t len) override;
 
  private:
   int relay_count_;

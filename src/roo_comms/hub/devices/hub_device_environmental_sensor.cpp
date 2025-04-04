@@ -79,7 +79,7 @@ roo_transceivers::Measurement HubDeviceEnvironmentalSensor::read(
   }
 }
 
-void HubDeviceEnvironmentalSensor::updateState(const roo::byte* data,
+void HubDeviceEnvironmentalSensor::updateState(const uint8_t* data,
                                                size_t len) {
   roo_comms_DataMessage data_message;
   if (!TryParsingAsHomeAutomationDataMessage(data, len, data_message)) {

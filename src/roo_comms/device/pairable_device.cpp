@@ -160,6 +160,9 @@ void PairableDevice::setState(State new_state) {
       // unpairer.scheduleAfter(roo_time::Seconds(20));
       break;
     }
+    case kSleep: {
+      break;
+    }
   }
   State prev_state = state_;
   state_ = new_state;
@@ -184,7 +187,8 @@ void PairableDevice::sendPairingRequestMessage() {
 void PairableDevice::processMessage(const roo_comms::Receiver::Message& msg) {
   {
     roo_comms_ControlMessage control_msg;
-    if (TryParsingAsControlMessage(msg.data.get(), msg.size, control_msg)) {
+    if (TryParsingAsControlMessage((const uint8_t*)msg.data.get(), msg.size,
+                                   control_msg)) {
       switch (control_msg.which_contents) {
         case roo_comms_ControlMessage_hub_discovery_response_tag: {
           if (state_ != kPairing) {

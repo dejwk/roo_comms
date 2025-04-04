@@ -68,7 +68,7 @@ void HubDeviceRelay::requestUpdate() const {
   RequestRelayState(transport(), destination());
 }
 
-void HubDeviceRelay::updateState(const roo::byte* data, size_t len) {
+void HubDeviceRelay::updateState(const uint8_t* data, size_t len) {
   roo_comms_DataMessage data_message;
   if (!TryParsingAsHomeAutomationDataMessage(data, len, data_message)) {
     LOG(WARNING) << "Failed to parse data message";

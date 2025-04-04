@@ -18,7 +18,7 @@ class HubDeviceEnvironmentalSensor : public HubDevice {
   roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const override;
 
-  void updateState(const roo::byte* data, size_t len) override;
+  void updateState(const uint8_t* data, size_t len) override;
 
  private:
   roo_comms_HomeAutomationDeviceDescriptor_EnvironmentalSensor descriptor_;

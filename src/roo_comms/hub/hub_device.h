@@ -27,7 +27,7 @@ class HubDevice {
 
   virtual void requestUpdate() const {}
 
-  virtual void updateState(const roo::byte* data, size_t len) = 0;
+  virtual void updateState(const uint8_t* data, size_t len) = 0;
 
  protected:
   EspNowTransport& transport() const { return transport_; }
