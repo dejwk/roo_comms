@@ -291,7 +291,6 @@ bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator &locator,
                               roo_transceivers_Descriptor &descriptor) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator, addr)) return false;
-  LOG(INFO) << "Parsed mac: " << addr;
   HubDevice *device = lookupDevice(addr);
   if (device == nullptr) {
     LOG(WARNING) << "Received data message from unknown device " << addr;
