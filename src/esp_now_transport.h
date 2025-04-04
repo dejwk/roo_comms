@@ -118,49 +118,12 @@ class Receiver {
 
   Receiver(roo_scheduler::Scheduler& scheduler, ProcessorFn processor_fn,
            size_t max_queue_size, size_t min_msg_size, size_t max_msg_size,
-           ValidatorFn validator_fn)
-      : queue_([this]() { processor_.scheduleNow(); }),
-        processor_fn_(std::move(processor_fn)),
-        validator_fn_(std::move(validator_fn)),
-        processor_(scheduler, [this]() { processMessages(); }),
-        max_quqeue_size_(max_queue_size),
-        min_msg_size_(min_msg_size),
-        max_msg_size_(max_msg_size) {}
+           ValidatorFn validator_fn);
 
   void handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
-              size_t len) {
-    if (len < min_msg_size_) {
-      LOG(WARNING) << "Received bogus message (too short: " << len
-                   << " bytes); ignoring";
-      return;
-    }
-    if (len > max_msg_size_) {
-      LOG(WARNING) << "Received bogus message (too large: " << len
-                   << " bytes); ignoring";
-      return;
-    }
-    if (queue_.size() >= max_quqeue_size_) {
-      LOG(WARNING) << "Received message, but queue is full; ignoring";
-      return;
-    }
-    if (validator_fn_ != nullptr &&
-        !validator_fn_((const roo::byte*)incoming_data, len)) {
-      LOG(WARNING) << "Received message, but validation failed; ignoring";
-      return;
-    }
-    std::unique_ptr<roo_io::byte[]> data(new roo::byte[len]);
-    memcpy(data.get(), incoming_data, len);
-    queue_.push(Message{.source = roo_io::MacAddress(mac_addr),
-                        .size = len,
-                        .data = std::move(data)});
-  }
+              size_t len);
 
-  void processMessages() {
-    Message msg;
-    while (queue_.pop(msg)) {
-      processor_fn_(msg);
-    }
-  }
+  void processMessages();
 
  private:
   MessageQueue<Message> queue_;
