@@ -2,6 +2,7 @@
 
 #include <thread>
 
+#include "WiFi.h"
 #include "comms.pb.h"
 #include "esp_now.h"
 #include "message_queue.h"
@@ -24,7 +25,11 @@ class EspNowPeer;
 
 class EspNowTransport {
  public:
+  enum Mode { kNormalMode = 0, kLowPowerMode = 1 };
   EspNowTransport() : channel_(0) {}
+
+  void begin(Mode mode);
+  void end() { esp_now_deinit(); }
 
   uint8_t channel() const { return channel_; }
 
@@ -124,8 +129,6 @@ class Receiver {
 
   void handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
               size_t len) {
-    LOG(INFO) << "Received message of size " << len << " from "
-              << roo_io::MacAddress(mac_addr);
     if (len < min_msg_size_) {
       LOG(WARNING) << "Received bogus message (too short: " << len
                    << " bytes); ignoring";
@@ -140,11 +143,12 @@ class Receiver {
       LOG(WARNING) << "Received message, but queue is full; ignoring";
       return;
     }
-    if (validator_fn_ != nullptr && !validator_fn_(incoming_data, len)) {
+    if (validator_fn_ != nullptr &&
+        !validator_fn_((const roo::byte*)incoming_data, len)) {
       LOG(WARNING) << "Received message, but validation failed; ignoring";
       return;
     }
-    std::unique_ptr<roo_io::byte[]> data(new roo_io::byte[len]);
+    std::unique_ptr<roo_io::byte[]> data(new roo::byte[len]);
     memcpy(data.get(), incoming_data, len);
     queue_.push(Message{.source = roo_io::MacAddress(mac_addr),
                         .size = len,
@@ -162,10 +166,10 @@ class Receiver {
   MessageQueue<Message> queue_;
   ProcessorFn processor_fn_;
   ValidatorFn validator_fn_;
+  roo_scheduler::SingletonTask processor_;
   size_t max_quqeue_size_;
   size_t min_msg_size_;
   size_t max_msg_size_;
-  roo_scheduler::SingletonTask processor_;
 };
 
 }  // namespace roo_comms

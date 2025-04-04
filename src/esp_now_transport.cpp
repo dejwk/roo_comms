@@ -1,5 +1,6 @@
 #include "esp_now_transport.h"
 
+#include "WiFi.h"
 #include "esp_err.h"
 #include "esp_wifi.h"
 
@@ -8,6 +9,15 @@
 #endif
 
 namespace roo_comms {
+
+void EspNowTransport::begin(Mode mode) {
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_protocol(
+      WIFI_IF_STA, mode == kNormalMode ? WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G |
+                                             WIFI_PROTOCOL_11N
+                                       : WIFI_PROTOCOL_LR);
+  ESP_ERROR_CHECK(esp_now_init());
+}
 
 void EspNowTransport::setChannel(uint8_t channel) {
   channel_ = channel;
