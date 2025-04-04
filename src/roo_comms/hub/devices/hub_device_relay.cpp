@@ -24,17 +24,14 @@ void HubDeviceRelay::getDescriptor(
     snprintf(result.actuators[i].id, 24, "relay_%d", i + 1);
     result.actuators[i].quantity = roo_transceivers_Quantity_kBinaryState;
   }
-
-  strcpy(result.actuators[0].id, "relay");
-  result.actuators[0].quantity = roo_transceivers_Quantity_kBinaryState;
 }
 
 namespace {
 
 int extractRelayId(const char* actuator_id) {
   if (strlen(actuator_id) == 7 && strncmp(actuator_id, "relay_", 6) == 0 &&
-      actuator_id[6] >= '0' && actuator_id[6] <= '8') {
-    return actuator_id[6] - '0';
+      actuator_id[6] >= '1' && actuator_id[6] <= '8') {
+    return actuator_id[6] - '1';
   }
   return -1;
 }
@@ -56,11 +53,15 @@ roo_transceivers::Measurement HubDeviceRelay::read(
 
 bool HubDeviceRelay::write(const roo_transceivers::ActuatorId& actuator_id,
                            float value) const {
-  if (value != 0.0f && value != 1.0f) return false;
+  if (value != 0.0f && value != 1.0f) {
+    LOG(WARNING) << "Received bogus write value " << value;
+    return false;
+  }
   int d = extractRelayId(actuator_id.c_str());
   if (d >= 0) {
     return WriteRelay(transport(), destination(), d, value == 1.0f);
   }
+  LOG(WARNING) << "Received bogus relay ID " << actuator_id.c_str();
   return false;
 }
 
