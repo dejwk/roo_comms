@@ -57,8 +57,7 @@ class Hub : public roo_transceivers::Universe {
 
   void removeEventListener(roo_transceivers::EventListener *listener) override;
 
-  void approvePairing(const roo_transceivers::DeviceLocator &locator,
-                      const roo_transceivers_Descriptor &descriptor);
+  void approvePairing(const roo_transceivers::DeviceLocator &locator);
 
  private:
   void processMessage(const roo_comms::Receiver::Message &received);
@@ -68,6 +67,9 @@ class Hub : public roo_transceivers::Universe {
 
   void processPairingRequest(const roo_io::MacAddress &origin,
                              const roo_comms_DeviceDescriptor &descriptor);
+
+  void pair(const roo_io::MacAddress &origin,
+            const roo_comms_DeviceDescriptor &descriptor);
 
   bool checkSupportedType(const roo_comms_DeviceDescriptor &descriptor);
 
@@ -99,10 +101,22 @@ class Hub : public roo_transceivers::Universe {
 
   std::vector<roo_io::MacAddress> transceiver_addresses_;
 
-  // Pending pairing requests that have been approved.
+  struct PendingPairingRequest {
+    enum State { kPending, kApproved };
+    roo_transceivers_Descriptor descriptor;
+    State state;
+  };
+  int32_t next_pairing_request_id_;
+
+  // Pending pairing requests.
   roo_collections::FlatSmallHashMap<roo_transceivers::DeviceLocator,
-                                    roo_transceivers_Descriptor>
-      approved_pairings_;
+                                    PendingPairingRequest>
+      pending_pairings_;
+
+  //   // Pending pairing requests that have been approved.
+  //   roo_collections::FlatSmallHashMap<roo_transceivers::DeviceLocator,
+  //                                     roo_transceivers_Descriptor>
+  //       approved_pairings_;
 
   // Callback to be invoked when we receive a broadcast discovery request. It
   // can be used to start interaction with a human, to check if we should

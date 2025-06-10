@@ -49,14 +49,46 @@ void Hub::processDiscoveryRequest(
   }
   roo_transceivers_Descriptor generic_descriptor;
   device->getDescriptor(generic_descriptor);
-  pairing_request_cb_(DeviceLocator(origin), generic_descriptor);
+  auto locator = DeviceLocator(origin);
+  if (auto itr = pending_pairings_.find(locator);
+      itr != pending_pairings_.end()) {
+    if (!(itr->second.descriptor == generic_descriptor)) {
+      LOG(WARNING) << "New pairing request from " << origin
+                   << " does not match previously sent descriptor";
+      return;
+    }
+    if (itr->second.state == PendingPairingRequest::kApproved) {
+      roo_io::MacAddress addr;
+      if (!ParseMac(locator, addr)) return;
+      SendDiscoveryResponse(transport_, addr);
+    }
+    return;
+  }
+  pending_pairings_[locator] = {.descriptor = generic_descriptor,
+                                .state = PendingPairingRequest::kPending};
+  pairing_request_cb_(locator, generic_descriptor);
+}
+
+void Hub::approvePairing(const roo_transceivers::DeviceLocator &locator) {
+  auto itr = pending_pairings_.find(locator);
+  if (itr == pending_pairings_.end()) {
+    LOG(WARNING) << "Pairing request for " << locator << " not found";
+    return;
+  }
+  itr->second.state = PendingPairingRequest::kApproved;
+  roo_io::MacAddress addr;
+  if (!ParseMac(locator, addr)) return;
+  SendDiscoveryResponse(transport_, addr);
 }
 
 void Hub::processPairingRequest(const roo_io::MacAddress &origin,
                                 const roo_comms_DeviceDescriptor &descriptor) {
   if (!checkSupportedType(descriptor)) return;
-  auto itr = approved_pairings_.find(DeviceLocator(origin));
-  if (itr == approved_pairings_.end()) {
+  auto itr = pending_pairings_.find(DeviceLocator(origin));
+  if (itr == pending_pairings_.end()) {
+    return;
+  }
+  if (itr->second.state != PendingPairingRequest::kApproved) {
     return;
   }
   std::unique_ptr<HubDevice> device =
@@ -65,13 +97,19 @@ void Hub::processPairingRequest(const roo_io::MacAddress &origin,
     LOG(WARNING) << "Factory failed to create device for " << origin;
     return;
   }
-  roo_transceivers_Descriptor approved_descriptor;
-  device->getDescriptor(approved_descriptor);
-  if (!(itr->second == approved_descriptor)) {
+  roo_transceivers_Descriptor new_descriptor;
+  device->getDescriptor(new_descriptor);
+  if (!(itr->second.descriptor == new_descriptor)) {
     LOG(WARNING) << "Pairing request from " << origin
                  << " does not match approved descriptor";
     return;
   }
+  pair(origin, descriptor);
+  pending_pairings_.erase(itr);
+}
+
+void Hub::pair(const roo_io::MacAddress &origin,
+               const roo_comms_DeviceDescriptor &descriptor) {
   if (!addTransceiver(origin, descriptor)) {
     LOG(WARNING) << "Failed to add transceiver " << origin;
     return;
@@ -124,7 +162,8 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
           },
           100, 8, 256, nullptr),
       device_factory_(device_factory),
-      pairing_request_cb_(std::move(pairing_request_cb)) {}
+      pairing_request_cb_(std::move(pairing_request_cb)),
+      next_pairing_request_id_(0) {}
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
@@ -357,14 +396,6 @@ void Hub::notifyNewReadingsAvailable() {
   for (auto *listener : listeners_) {
     listener->newReadingsAvailable();
   }
-}
-
-void Hub::approvePairing(const roo_transceivers::DeviceLocator &locator,
-                         const roo_transceivers_Descriptor &descriptor) {
-  roo_io::MacAddress addr;
-  if (!ParseMac(locator, addr)) return;
-  approved_pairings_[locator] = descriptor;
-  SendDiscoveryResponse(transport_, addr);
 }
 
 }  // namespace roo_comms
