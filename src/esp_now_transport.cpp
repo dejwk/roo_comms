@@ -193,7 +193,7 @@ Receiver::Receiver(roo_scheduler::Scheduler& scheduler,
 void Receiver::handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
                       size_t len) {
   MLOG(roo_esp_now_transport) << "Received message of size " << len << " from "
-                              << roo_io::MacAddress(mac_addr);
+                              << roo_io::MacAddress(mac_addr) << "; queue size: " << queue_.size();
   if (len < min_msg_size_) {
     LOG(WARNING) << "Received bogus message (too short: " << len
                  << " bytes); ignoring";
