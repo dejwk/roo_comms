@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "roo_backport.h"
+#include "roo_backport/byte.h"
 #include "roo_io/text/base64.h"
 #include "roo_io/text/string_printf.h"
 

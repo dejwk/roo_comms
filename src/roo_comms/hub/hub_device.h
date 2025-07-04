@@ -2,7 +2,6 @@
 #define ROO_COMMS_HUB_DEVICE_H
 
 #include "esp_now_transport.h"
-#include "roo_backport.h"
 #include "roo_io/net/mac_address.h"
 #include "roo_transceivers.pb.h"
 #include "roo_transceivers/id.h"

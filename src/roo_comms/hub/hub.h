@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "esp_now_transport.h"
-#include "roo_backport.h"
 #include "roo_collections/flat_small_hash_map.h"
 #include "roo_comms/hub/hub_device_factory.h"
 #include "roo_comms/pairing.h"
