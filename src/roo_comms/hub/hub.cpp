@@ -50,8 +50,8 @@ void Hub::processDiscoveryRequest(
   roo_transceivers_Descriptor generic_descriptor;
   device->getDescriptor(generic_descriptor);
   auto locator = DeviceLocator(origin);
-  if (auto itr = pending_pairings_.find(locator);
-      itr != pending_pairings_.end()) {
+  auto itr = pending_pairings_.find(locator);
+  if (itr != pending_pairings_.end()) {
     if (!(itr->second.descriptor == generic_descriptor)) {
       LOG(WARNING) << "New pairing request from " << origin
                    << " does not match previously sent descriptor";
