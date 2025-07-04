@@ -1,0 +1,38 @@
+{
+    "name": "roo_comms",
+    "description": "Home automation using ESP-NOW",
+    "authors": [
+        {
+            "name": "Dejwk",
+            "email": "dejwk.oss@gmail.com",
+            "maintainer": true
+        }
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/dejwk/roo_comms"
+    },
+    "version": "1.0.0",
+    "homepage": "https://github.com/dejwk/roo_comms",
+    "frameworks": [
+        "Arduino"
+    ],
+    "build": {
+        "srcDir": "src",
+        "srcFilter": "+<*> -<examples> -<benchmarks> -<doc> -<test>"
+    },
+    "examples": [
+        "examples/**/*.ino"
+    ],
+    "dependencies": {
+        "Wire": ">0",
+        "dejwk/roo_collections": ">=1.1.6",
+        "dejwk/roo_io": ">0",
+        "dejwk/roo_led": ">0",
+        "dejwk/roo_logging": ">=1.0.4",
+        "dejwk/roo_prefs": ">=1.0.3",
+        "dejwk/roo_scheduler": "^2.0.2",
+        "dejwk/roo_time": ">0",
+        "dejwk/roo_transceivers": ">0"
+    }
+}
