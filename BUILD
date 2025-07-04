@@ -20,6 +20,7 @@ cc_library(
         "//lib/roo_control",
         "//lib/roo_led",
         "//lib/roo_scheduler",
+        "//lib/roo_threads",
         "//lib/roo_io",
         "//lib/roo_transceivers",
         "@nanopb//:nanopb",

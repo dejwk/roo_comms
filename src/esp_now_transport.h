@@ -1,7 +1,5 @@
 #pragma once
 
-#include <thread>
-
 #include "WiFi.h"
 #include "comms.pb.h"
 #include "esp_now.h"
@@ -10,11 +8,13 @@
 #include "pb_encode.h"
 #include "roo_collections/flat_small_hash_map.h"
 #include "roo_collections/flat_small_hash_set.h"
-#include "roo_io/base/byte.h"
+#include "roo_backport/byte.h"
 #include "roo_io/memory/memory_output_iterator.h"
 #include "roo_io/net/mac_address.h"
 #include "roo_logging.h"
 #include "roo_scheduler.h"
+#include "roo_threads/mutex.h"
+#include "roo_threads/condition_variable.h"
 
 namespace roo_comms {
 
@@ -73,8 +73,8 @@ class EspNowTransport {
     int count;
   };
   friend class EspNowPeer;
-  std::mutex pending_send_mutex_;
-  std::condition_variable pending_emptied_;
+  roo::mutex pending_send_mutex_;
+  roo::condition_variable pending_emptied_;
   roo_collections::FlatSmallHashMap<roo_io::MacAddress, Outbox> pending_;
 
   uint8_t channel_;

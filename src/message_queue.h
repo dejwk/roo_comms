@@ -1,9 +1,9 @@
 #pragma once
 
-#include <mutex>
 #include <queue>
 
 #include "roo_scheduler.h"
+#include "roo_threads/mutex.h"
 
 namespace roo_comms {
 
@@ -18,7 +18,7 @@ class MessageQueue {
   void push(Message msg) {
     bool was_empty = false;
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      roo::lock_guard<roo::mutex> lock(mutex_);
       was_empty = queue_.empty();
       queue_.push(std::move(msg));
     }
@@ -28,7 +28,7 @@ class MessageQueue {
   }
 
   bool pop(Message &msg) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    roo::lock_guard<roo::mutex> lock(mutex_);
     if (queue_.empty()) {
       return false;
     }
@@ -40,7 +40,7 @@ class MessageQueue {
   size_t size() const { return queue_.size(); }
 
  private:
-  mutable std::mutex mutex_;
+  mutable roo::mutex mutex_;
   std::queue<Message> queue_;
   std::function<void()> nonempty_cb_;
 };

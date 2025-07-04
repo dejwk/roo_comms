@@ -50,7 +50,7 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
                            size_t len) {
   roo_io::MacAddress addr(peer.peer_.peer_addr);
   {
-    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     while (true) {
       auto itr = pending_.find(addr);
       if (itr == pending_.end()) {
@@ -65,7 +65,7 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   if (result != ESP_OK) {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
-    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     pending_.erase(addr);
     pending_emptied_.notify_all();
     return false;
@@ -75,7 +75,7 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
   // delivered before we reacquire it. Therefore we check the state before
   // waiting.
   {
-    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     bool is_success = false;
     while (true) {
       Outbox& pending = pending_[addr];
@@ -101,7 +101,7 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
                                 size_t len) {
   roo_io::MacAddress addr(peer.peer_.peer_addr);
   while (true) {
-    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     auto itr = pending_.find(addr);
     if (itr == pending_.end()) {
       pending_[addr] = Outbox(Outbox::kAsyncPending);
@@ -125,7 +125,7 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
   } else {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
-    std::unique_lock<std::mutex> lock(pending_send_mutex_);
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     Outbox& pending = pending_[addr];
     CHECK_EQ(Outbox::kAsyncPending, pending.status);
     pending.count--;
@@ -154,7 +154,7 @@ void EspNowTransport::broadcastAsync(const void* data, size_t len) {
 void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
   MLOG(roo_esp_now_transport)
       << "Delivery status for " << addr << ": " << success;
-  std::lock_guard<std::mutex> lock(pending_send_mutex_);
+  roo::lock_guard<roo::mutex> lock(pending_send_mutex_);
   Outbox& pending = pending_[addr];
   CHECK_GT(pending.count, 0);
   if (--pending.count == 0) {
