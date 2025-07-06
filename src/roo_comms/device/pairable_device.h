@@ -55,6 +55,11 @@ class PairableDevice {
     kSleep = 5,
   };
 
+  enum InitialState {
+    kColdStart = 0,  // Regular.
+    kWakeup = 1,     // Coming back from deep sleep.
+  };
+
   class StateSignaler {
    public:
     virtual ~StateSignaler() = default;
@@ -77,7 +82,10 @@ class PairableDevice {
       std::function<void(const roo_comms::Receiver::Message&)>
           on_app_data_recv);
 
-  void begin(bool wakeup);
+  void begin(InitialState initial_state = kColdStart);
+
+  // Should be called instead of begin() when coming back from deep sleep.
+  void wakeup();
 
   State state() const { return state_; }
 

@@ -85,8 +85,8 @@ PairableDevice::PairableDevice(
         buttonPressed(is_long_pressed);
       }) {}
 
-void PairableDevice::begin(bool wakeup) {
-  if (wakeup) {
+void PairableDevice::begin(InitialState initial_state) {
+  if (initial_state == kWakeup) {
     state_ = kSleep;
   }
   button_.start();

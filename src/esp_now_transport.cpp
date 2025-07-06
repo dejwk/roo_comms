@@ -20,6 +20,8 @@ void EspNowTransport::begin(Mode mode) {
   ESP_ERROR_CHECK(esp_now_init());
 }
 
+void EspNowTransport::end() { esp_now_deinit(); }
+
 void EspNowTransport::setChannel(uint8_t channel) {
   channel_ = channel;
   ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
@@ -192,8 +194,9 @@ Receiver::Receiver(roo_scheduler::Scheduler& scheduler,
 
 void Receiver::handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
                       size_t len) {
-  MLOG(roo_esp_now_transport) << "Received message of size " << len << " from "
-                              << roo_io::MacAddress(mac_addr) << "; queue size: " << queue_.size();
+  MLOG(roo_esp_now_transport)
+      << "Received message of size " << len << " from "
+      << roo_io::MacAddress(mac_addr) << "; queue size: " << queue_.size();
   if (len < min_msg_size_) {
     LOG(WARNING) << "Received bogus message (too short: " << len
                  << " bytes); ignoring";
