@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "roo_comms.h"
 #include "roo_comms/transport/message_queue.h"
 #include "roo_io.h"
 #include "roo_io/net/mac_address.h"
@@ -24,8 +25,7 @@ class Receiver {
            size_t max_queue_size, size_t min_msg_size, size_t max_msg_size,
            ValidatorFn validator_fn);
 
-  void handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
-              size_t len);
+  void handle(const Source& source, const void* incoming_data, size_t len);
 
   void processMessages();
 

@@ -152,6 +152,11 @@ void Hub::processMessage(const roo_comms::Receiver::Message &received) {
   processDataMessage(received);
 }
 
+Hub::Hub(roo_scheduler::Scheduler &scheduler, HubDeviceFactory &device_factory,
+         PairingRequestCb pairing_request_cb)
+    : Hub(Transport(), scheduler, device_factory,
+          std::move(pairing_request_cb)) {}
+
 Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
          HubDeviceFactory &device_factory, PairingRequestCb pairing_request_cb)
     : store_("hub"),
@@ -168,6 +173,7 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
+  transport_.begin(kLongRangeMode);
   transceiver_addresses_.clear();
   std::unique_ptr<roo_io::byte[]> data = nullptr;
   size_t device_count = 0;
@@ -300,8 +306,8 @@ bool Hub::hasTransceiver(const roo_io::MacAddress &addr) {
                             transceiver_addresses_.end(), addr);
 }
 
-void Hub::onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  receiver_.handle(mac, incomingData, len);
+void Hub::onDataRecv(const Source &source, const void *data, size_t len) {
+  receiver_.handle(source, data, len);
 }
 
 void Hub::processDataMessage(const Receiver::Message &msg) {

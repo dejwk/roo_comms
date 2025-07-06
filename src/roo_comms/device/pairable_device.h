@@ -74,6 +74,15 @@ class PairableDevice {
   };
 
   PairableDevice(
+      const roo_comms_DeviceDescriptor* device_descriptor,
+      roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
+      StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+      std::function<void(State prev_state, State new_state)> on_state_changed,
+      std::function<void(const roo_comms::Receiver::Message&)>
+          on_app_data_recv);
+
+  // For testing.
+  PairableDevice(
       EspNowTransport& transport,
       const roo_comms_DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
@@ -93,8 +102,7 @@ class PairableDevice {
 
   EspNowPeer* peer() { return peer_.get(); }
 
-  void onDataRecv(const uint8_t* source_mac_addr, const uint8_t* incomingData,
-                  int len);
+  void onDataRecv(const Source& source, const void* data, size_t len);
 
  private:
   void buttonPressed(bool is_long_press);

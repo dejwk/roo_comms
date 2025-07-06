@@ -22,6 +22,10 @@ void EspNowTransport::begin(Mode mode) {
 
 void EspNowTransport::end() { esp_now_deinit(); }
 
+void EspNowTransport::setReceiverFn(ReceiverFn receiver_fn) {
+  receiver_fn_ = std::move(receiver_fn);
+}
+
 void EspNowTransport::setChannel(uint8_t channel) {
   channel_ = channel;
   ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
@@ -178,6 +182,13 @@ void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
     pending_emptied_.notify_all();
     MLOG(roo_esp_now_transport) << "No more calls pending for " << addr;
   };
+}
+
+void EspNowTransport::onDataRecv(const roo_io::MacAddress& addr,
+                                 const void* data, size_t len) {
+  if (receiver_fn_ == nullptr) return;
+  Source source{.addr = addr};
+  receiver_fn_(source, data, len);
 }
 
 }  // namespace roo_comms

@@ -53,6 +53,16 @@ void MonochromeLedSignaler::signalPairing() {
 }
 
 PairableDevice::PairableDevice(
+    const roo_comms_DeviceDescriptor* device_descriptor,
+    roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
+    StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+    std::function<void(State prev_state, State new_state)> on_state_changed,
+    std::function<void(const roo_comms::Receiver::Message&)> on_app_data_recv)
+    : PairableDevice(Transport(), device_descriptor, prefs, button, signaler,
+                     scheduler, std::move(on_state_changed),
+                     std::move(on_app_data_recv)) {}
+
+PairableDevice::PairableDevice(
     EspNowTransport& transport,
     const roo_comms_DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
@@ -104,9 +114,8 @@ void PairableDevice::restoreState() {
   }
 }
 
-void PairableDevice::onDataRecv(const uint8_t* source_mac_addr,
-                                const uint8_t* incomingData, int len) {
-  receiver_.handle(source_mac_addr, incomingData, len);
+void PairableDevice::onDataRecv(const Source& source, const void* data, size_t len) {
+  receiver_.handle(source, data, len);
 }
 
 void PairableDevice::buttonPressed(bool is_long_press) {

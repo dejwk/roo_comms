@@ -18,12 +18,16 @@ class Hub : public roo_transceivers::Universe {
       std::function<void(const roo_transceivers::DeviceLocator &,
                          const roo_transceivers_Descriptor &)>;
 
+  Hub(roo_scheduler::Scheduler &scheduler, HubDeviceFactory &device_factory,
+      PairingRequestCb pairing_request_cb);
+
+  // For testing.
   Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
       HubDeviceFactory &device_factory, PairingRequestCb pairing_request_cb);
 
   void init(uint8_t channel);
 
-  void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
+  void onDataRecv(const Source &source, const void *data, size_t len);
 
   size_t deviceCount() const { return transceiver_addresses_.size(); }
 

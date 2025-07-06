@@ -42,6 +42,8 @@ class EspNowTransport {
   // Must be called after Wifi is initialized.
   void setChannel(uint8_t channel);
 
+  void setReceiverFn(ReceiverFn receiver_fn);
+
   // Sends a message and waits until it gets delivered to the recipient ESP
   // service. Usually takes a few ms. Returns true if delivery was successful;
   // false otherwise.
@@ -64,9 +66,12 @@ class EspNowTransport {
 
   void broadcastAsync(const void* data, size_t len);
 
+  
   // Must be called by the registered ESP-NOW callback. Otherwise, memory leaks
   // and deadlocks may occur.
   void ackSent(const roo_io::MacAddress& addr, bool success);
+
+  void onDataRecv(const roo_io::MacAddress& addr, const void* data, size_t len);
 
  private:
   struct Outbox {
@@ -82,6 +87,8 @@ class EspNowTransport {
     Status status;
     int count;
   };
+
+  ReceiverFn receiver_fn_;
   friend class EspNowPeer;
   roo::mutex pending_send_mutex_;
   roo::condition_variable pending_emptied_;

@@ -20,11 +20,11 @@ Receiver::Receiver(roo_scheduler::Scheduler& scheduler,
       min_msg_size_(min_msg_size),
       max_msg_size_(max_msg_size) {}
 
-void Receiver::handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
+void Receiver::handle(const Source& source, const void* incoming_data,
                       size_t len) {
   MLOG(roo_esp_now_transport)
-      << "Received message of size " << len << " from "
-      << roo_io::MacAddress(mac_addr) << "; queue size: " << queue_.size();
+      << "Received message of size " << len << " from " << source.addr
+      << "; queue size: " << queue_.size();
   if (len < min_msg_size_) {
     LOG(WARNING) << "Received bogus message (too short: " << len
                  << " bytes); ignoring";
@@ -46,7 +46,7 @@ void Receiver::handle(const uint8_t* mac_addr, const uint8_t* incoming_data,
   }
   std::unique_ptr<roo_io::byte[]> data(new roo::byte[len]);
   memcpy(data.get(), incoming_data, len);
-  queue_.push(Message{.source = roo_io::MacAddress(mac_addr),
+  queue_.push(Message{.source = source.addr,
                       .size = len,
                       .data = std::move(data)});
 }
