@@ -173,7 +173,6 @@ Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
-  transport_.begin(kLongRangeMode);
   transceiver_addresses_.clear();
   std::unique_ptr<roo_io::byte[]> data = nullptr;
   size_t device_count = 0;
@@ -228,6 +227,11 @@ void Hub::init(uint8_t channel) {
     }
     LOG(INFO) << "Loaded info for paired transceiver " << addr;
   }
+
+  transport_.setReceiverFn(
+      [this](const roo_comms::Source &source, const void *data, size_t len) {
+        onDataRecv(source, data, len);
+      });
 }
 
 bool Hub::addTransceiver(const roo_io::MacAddress &addr,

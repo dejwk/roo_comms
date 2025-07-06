@@ -186,7 +186,11 @@ void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
 
 void EspNowTransport::onDataRecv(const roo_io::MacAddress& addr,
                                  const void* data, size_t len) {
-  if (receiver_fn_ == nullptr) return;
+  if (receiver_fn_ == nullptr) {
+    LOG(WARNING) << "Received data from " << addr
+                << " but no receiver function is set. Ignoring.";
+    return;
+  }
   Source source{.addr = addr};
   receiver_fn_(source, data, len);
 }
