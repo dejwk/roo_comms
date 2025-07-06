@@ -9,6 +9,7 @@
 #include "roo_collections.h"
 #include "roo_collections/flat_small_hash_map.h"
 #include "roo_collections/flat_small_hash_set.h"
+#include "roo_comms.h"
 #include "roo_io.h"
 #include "roo_io/memory/memory_output_iterator.h"
 #include "roo_io/net/mac_address.h"
@@ -31,10 +32,6 @@ class EspNowPeer;
 
 class EspNowTransport {
  public:
-  enum Mode {
-    kNormalMode = 0,
-    kLongRangeMode = 1  // Activates WIFI_PROTOCOL_LR.
-  };
   EspNowTransport() : channel_(0) {}
 
   void begin(Mode mode);
