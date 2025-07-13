@@ -38,6 +38,18 @@ void End() {
   Transport().end();
 }
 
+bool Send(const roo_io::MacAddress& addr, const void* data, size_t len) {
+  return Transport().sendOnce(addr, data, len);
+}
+
+bool SendAsync(const roo_io::MacAddress& addr, const void* data, size_t len) {
+  return Transport().sendOnceAsync(addr, data, len);
+}
+
+void BroadcastAsync(const void* data, size_t len) {
+  return Transport().broadcastAsync(data, len);
+}
+
 uint8_t GetWiFiChannel() { return Transport().channel(); }
 
 void SetWiFiChannel(uint8_t channel) { Transport().setChannel(channel); }
