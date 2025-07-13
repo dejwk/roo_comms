@@ -65,7 +65,6 @@ class EspNowTransport {
                      size_t len);
 
   void broadcastAsync(const void* data, size_t len);
-
   
   // Must be called by the registered ESP-NOW callback. Otherwise, memory leaks
   // and deadlocks may occur.
