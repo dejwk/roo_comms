@@ -18,7 +18,7 @@ cc_library(
 #        "//lib/roo_prefs",
 #        "//roo_testing:arduino",
         "//lib/roo_control",
-        "//lib/roo_led",
+        "//lib/roo_blink",
         "//lib/roo_scheduler",
         "//lib/roo_threads",
         "//lib/roo_io",

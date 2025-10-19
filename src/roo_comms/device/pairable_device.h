@@ -8,6 +8,11 @@
 
 #include "esp_err.h"
 // #include "esp_now.h"
+#include "roo_blink.h"
+#include "roo_blink/monochrome/blinker.h"
+#include "roo_blink/monochrome/led.h"
+#include "roo_blink/rgb/blinker.h"
+#include "roo_blink/rgb/led.h"
 #include "roo_comms/pairing.h"
 #include "roo_comms/transport/receiver.h"
 #include "roo_control.h"
@@ -15,11 +20,6 @@
 #include "roo_control/selector/selector.h"
 #include "roo_io.h"
 #include "roo_io/net/mac_address.h"
-#include "roo_led.h"
-#include "roo_led/monochrome/blinker.h"
-#include "roo_led/monochrome/led.h"
-#include "roo_led/rgb/blinker.h"
-#include "roo_led/rgb/led.h"
 #include "roo_prefs.h"
 #include "roo_scheduler.h"
 
@@ -155,7 +155,7 @@ class PairableDevice {
 
 class RgbLedSignaler : public PairableDevice::StateSignaler {
  public:
-  RgbLedSignaler(roo_led::RgbLed& led, roo_scheduler::Scheduler& scheduler);
+  RgbLedSignaler(roo_blink::RgbLed& led, roo_scheduler::Scheduler& scheduler);
 
   void turnOff() override;
 
@@ -166,13 +166,13 @@ class RgbLedSignaler : public PairableDevice::StateSignaler {
   void signalPairing() override;
 
  private:
-  roo_led::RgbLed& led_;
-  roo_led::RgbBlinker blinker_;
+  roo_blink::RgbLed& led_;
+  roo_blink::RgbBlinker blinker_;
 };
 
 class MonochromeLedSignaler : public PairableDevice::StateSignaler {
  public:
-  MonochromeLedSignaler(roo_led::MonochromeLed& led,
+  MonochromeLedSignaler(roo_blink::Led& led,
                         roo_scheduler::Scheduler& scheduler,
                         uint16_t normal_mode_intensity = 0);
 
@@ -185,8 +185,8 @@ class MonochromeLedSignaler : public PairableDevice::StateSignaler {
   void signalPairing() override;
 
  private:
-  roo_led::MonochromeLed& led_;
-  roo_led::Blinker blinker_;
+  roo_blink::Led& led_;
+  roo_blink::Blinker blinker_;
 
   // The intensity of light in 'normal' mode (paired, active).
   uint16_t normal_mode_intensity_;

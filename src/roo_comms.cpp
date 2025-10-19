@@ -11,6 +11,22 @@ EspNowTransport& Transport() {
 
 namespace {
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+
+void OnDataSent(const wifi_tx_info_t* tx_info, esp_now_send_status_t status) {
+  Transport().ackSent(roo_io::MacAddress(tx_info->des_addr),
+                      status == ESP_NOW_SEND_SUCCESS);
+}
+
+void OnDataRecv(const esp_now_recv_info* recv_info, const uint8_t* data,
+                int len) {
+  Transport().onDataRecv(roo_io::MacAddress(recv_info->src_addr), data, len);
+}
+
+#else
+
+// Legacy API.
+
 void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
   Transport().ackSent(roo_io::MacAddress(mac_addr),
                       status == ESP_NOW_SEND_SUCCESS);
@@ -19,6 +35,8 @@ void OnDataSent(const uint8_t* mac_addr, esp_now_send_status_t status) {
 void OnDataRecv(const uint8_t* mac_addr, const uint8_t* data, int len) {
   Transport().onDataRecv(roo_io::MacAddress(mac_addr), data, len);
 }
+
+#endif
 
 }  // namespace
 

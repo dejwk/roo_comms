@@ -10,28 +10,29 @@ Button::Button(roo_control::BinarySelector& selector,
           scheduler, [this]() { tick(); }, roo_time::Millis(10)),
       pressed_(pressed) {}
 
-RgbLedSignaler::RgbLedSignaler(roo_led::RgbLed& led,
+RgbLedSignaler::RgbLedSignaler(roo_blink::RgbLed& led,
                                roo_scheduler::Scheduler& scheduler)
     : led_(led), blinker_(led, scheduler) {}
 
 void RgbLedSignaler::turnOff() { blinker_.turnOff(); }
 
 void RgbLedSignaler::signalPaired() {
-  blinker_.repeat(roo_led::RgbBlink(Millis(400), roo_led::Color(0, 255, 0), 50),
-                  3);
+  blinker_.repeat(
+      roo_blink::RgbBlink(Millis(400), roo_blink::Color(0, 255, 0), 50), 3);
 }
 
 void RgbLedSignaler::signalUnpaired() {
   blinker_.loop(
-      roo_led::RgbBlink(Millis(500), roo_led::Color(255, 0, 255), 20));
+      roo_blink::RgbBlink(Millis(500), roo_blink::Color(255, 0, 255), 20));
 }
 
 void RgbLedSignaler::signalPairing() {
-  blinker_.loop(roo_led::RgbBlink(Millis(200), roo_led::Color(0, 0, 255), 50));
+  blinker_.loop(
+      roo_blink::RgbBlink(Millis(200), roo_blink::Color(0, 0, 255), 50));
 }
 
 MonochromeLedSignaler::MonochromeLedSignaler(
-    roo_led::MonochromeLed& led, roo_scheduler::Scheduler& scheduler,
+    roo_blink::Led& led, roo_scheduler::Scheduler& scheduler,
     uint16_t normal_mode_intensity)
     : led_(led),
       blinker_(led, scheduler),
@@ -40,16 +41,16 @@ MonochromeLedSignaler::MonochromeLedSignaler(
 void MonochromeLedSignaler::turnOff() { blinker_.turnOff(); }
 
 void MonochromeLedSignaler::signalPaired() {
-  blinker_.repeat(roo_led::Blink(Millis(1000), 50, 30, 30), 2,
+  blinker_.repeat(roo_blink::Blink(Millis(1000), 50, 30, 30), 2,
                   normal_mode_intensity_);
 }
 
 void MonochromeLedSignaler::signalUnpaired() {
-  blinker_.loop(roo_led::Blink(Millis(2000), 35, 0, 0));
+  blinker_.loop(roo_blink::Blink(Millis(2000), 35, 0, 0));
 }
 
 void MonochromeLedSignaler::signalPairing() {
-  blinker_.loop(roo_led::Blink(Millis(500), 50, 0, 100));
+  blinker_.loop(roo_blink::Blink(Millis(500), 50, 0, 100));
 }
 
 PairableDevice::PairableDevice(
@@ -114,7 +115,8 @@ void PairableDevice::restoreState() {
   }
 }
 
-void PairableDevice::onDataRecv(const Source& source, const void* data, size_t len) {
+void PairableDevice::onDataRecv(const Source& source, const void* data,
+                                size_t len) {
   receiver_.handle(source, data, len);
 }
 

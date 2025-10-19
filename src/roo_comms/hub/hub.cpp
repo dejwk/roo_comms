@@ -9,7 +9,7 @@
 
 namespace roo_comms {
 
-static const char *kMacsKey = "macs";
+static const char* kMacsKey = "macs";
 static constexpr size_t kMaxPairedDevices = 1000;
 
 static roo_transceivers::DeviceSchema kEspNowSchema =
@@ -17,14 +17,14 @@ static roo_transceivers::DeviceSchema kEspNowSchema =
 
 namespace {
 
-roo_transceivers::DeviceLocator DeviceLocator(const roo_io::MacAddress &addr) {
+roo_transceivers::DeviceLocator DeviceLocator(const roo_io::MacAddress& addr) {
   char buf[18];
   addr.writeStringTo(buf);
   return roo_transceivers::DeviceLocator(kEspNowSchema, buf);
 }
 
-bool ParseMac(const roo_transceivers::DeviceLocator &loc,
-              roo_io::MacAddress &result) {
+bool ParseMac(const roo_transceivers::DeviceLocator& loc,
+              roo_io::MacAddress& result) {
   if (loc.schema() != kEspNowSchema) {
     LOG(WARNING) << "Wrong schema";
     return false;
@@ -39,8 +39,8 @@ bool ParseMac(const roo_transceivers::DeviceLocator &loc,
 }  // namespace
 
 void Hub::processDiscoveryRequest(
-    const roo_io::MacAddress &origin,
-    const roo_comms_DeviceDescriptor &descriptor) {
+    const roo_io::MacAddress& origin,
+    const roo_comms_DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
   std::unique_ptr<HubDevice> device =
       device_factory_.createDevice(transport_, origin, descriptor);
@@ -70,7 +70,7 @@ void Hub::processDiscoveryRequest(
   pairing_request_cb_(locator, generic_descriptor);
 }
 
-void Hub::approvePairing(const roo_transceivers::DeviceLocator &locator) {
+void Hub::approvePairing(const roo_transceivers::DeviceLocator& locator) {
   auto itr = pending_pairings_.find(locator);
   if (itr == pending_pairings_.end()) {
     LOG(WARNING) << "Pairing request for " << locator << " not found";
@@ -82,8 +82,8 @@ void Hub::approvePairing(const roo_transceivers::DeviceLocator &locator) {
   SendDiscoveryResponse(transport_, addr);
 }
 
-void Hub::processPairingRequest(const roo_io::MacAddress &origin,
-                                const roo_comms_DeviceDescriptor &descriptor) {
+void Hub::processPairingRequest(const roo_io::MacAddress& origin,
+                                const roo_comms_DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
   auto itr = pending_pairings_.find(DeviceLocator(origin));
   if (itr == pending_pairings_.end()) {
@@ -109,8 +109,8 @@ void Hub::processPairingRequest(const roo_io::MacAddress &origin,
   pending_pairings_.erase(itr);
 }
 
-void Hub::pair(const roo_io::MacAddress &origin,
-               const roo_comms_DeviceDescriptor &descriptor) {
+void Hub::pair(const roo_io::MacAddress& origin,
+               const roo_comms_DeviceDescriptor& descriptor) {
   if (!addTransceiver(origin, descriptor)) {
     LOG(WARNING) << "Failed to add transceiver " << origin;
     return;
@@ -118,14 +118,14 @@ void Hub::pair(const roo_io::MacAddress &origin,
   SendPairingResponse(transport_, origin);
 }
 
-bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor &descriptor) {
+bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor& descriptor) {
   return device_factory_.isDeviceSupported(descriptor);
 }
 
-void Hub::processMessage(const roo_comms::Receiver::Message &received) {
+void Hub::processMessage(const roo_comms::Receiver::Message& received) {
   {
     roo_comms_ControlMessage msg;
-    if (TryParsingAsControlMessage((const uint8_t *)received.data.get(),
+    if (TryParsingAsControlMessage((const uint8_t*)received.data.get(),
                                    received.size, msg)) {
       switch (msg.which_contents) {
         case roo_comms_ControlMessage_hub_discovery_request_tag: {
@@ -152,18 +152,18 @@ void Hub::processMessage(const roo_comms::Receiver::Message &received) {
   processDataMessage(received);
 }
 
-Hub::Hub(roo_scheduler::Scheduler &scheduler, HubDeviceFactory &device_factory,
+Hub::Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
          PairingRequestCb pairing_request_cb)
     : Hub(Transport(), scheduler, device_factory,
           std::move(pairing_request_cb)) {}
 
-Hub::Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
-         HubDeviceFactory &device_factory, PairingRequestCb pairing_request_cb)
+Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
+         HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb)
     : store_("hub"),
       transport_(transport),
       receiver_(
           scheduler,
-          [this](const roo_comms::Receiver::Message &received) {
+          [this](const roo_comms::Receiver::Message& received) {
             processMessage(received);
           },
           100, 8, 256, nullptr),
@@ -210,7 +210,7 @@ void Hub::init(uint8_t channel) {
     CHECK_EQ(t.store().readBytes(addr_key, buf, details_length, nullptr),
              roo_prefs::READ_OK);
     pb_istream_t istream =
-        pb_istream_from_buffer((const pb_byte_t *)buf, details_length);
+        pb_istream_from_buffer((const pb_byte_t*)buf, details_length);
     roo_comms_DeviceDescriptor descriptor;
     bool status =
         pb_decode(&istream, roo_comms_DeviceDescriptor_fields, &descriptor);
@@ -229,13 +229,13 @@ void Hub::init(uint8_t channel) {
   }
 
   transport_.setReceiverFn(
-      [this](const roo_comms::Source &source, const void *data, size_t len) {
+      [this](const roo_comms::Source& source, const void* data, size_t len) {
         onDataRecv(source, data, len);
       });
 }
 
-bool Hub::addTransceiver(const roo_io::MacAddress &addr,
-                         const roo_comms_DeviceDescriptor &descriptor) {
+bool Hub::addTransceiver(const roo_io::MacAddress& addr,
+                         const roo_comms_DeviceDescriptor& descriptor) {
   std::unique_ptr<HubDevice> device =
       device_factory_.createDevice(transport_, addr, descriptor);
   if (device == nullptr) {
@@ -268,7 +268,7 @@ bool Hub::addTransceiver(const roo_io::MacAddress &addr,
   return true;
 }
 
-bool Hub::removeTransceiver(const roo_io::MacAddress &addr) {
+bool Hub::removeTransceiver(const roo_io::MacAddress& addr) {
   auto itr = std::lower_bound(transceiver_addresses_.begin(),
                               transceiver_addresses_.end(), addr);
   if (itr == transceiver_addresses_.end() || *itr != addr) {
@@ -295,7 +295,7 @@ bool Hub::removeTransceiver(const roo_io::MacAddress &addr) {
   return true;
 }
 
-void Hub::writeTransceiverAddresses(roo_prefs::Transaction &t) {
+void Hub::writeTransceiverAddresses(roo_prefs::Transaction& t) {
   size_t len = transceiver_addresses_.size() * 6;
   std::unique_ptr<roo_io::byte[]> encoded(new roo_io::byte[len]);
   for (size_t i = 0; i < transceiver_addresses_.size(); ++i) {
@@ -305,29 +305,29 @@ void Hub::writeTransceiverAddresses(roo_prefs::Transaction &t) {
            roo_prefs::WRITE_OK);
 }
 
-bool Hub::hasTransceiver(const roo_io::MacAddress &addr) {
+bool Hub::hasTransceiver(const roo_io::MacAddress& addr) {
   return std::binary_search(transceiver_addresses_.begin(),
                             transceiver_addresses_.end(), addr);
 }
 
-void Hub::onDataRecv(const Source &source, const void *data, size_t len) {
+void Hub::onDataRecv(const Source& source, const void* data, size_t len) {
   receiver_.handle(source, data, len);
 }
 
-void Hub::processDataMessage(const Receiver::Message &msg) {
-  HubDevice *device = lookupDevice(msg.source);
+void Hub::processDataMessage(const Receiver::Message& msg) {
+  HubDevice* device = lookupDevice(msg.source);
   if (device == nullptr) {
     LOG(WARNING) << "Received data message from unknown device "
                  << msg.source.asString();
     return;
   }
-  device->updateState((const uint8_t *)msg.data.get(), msg.size);
+  device->updateState((const uint8_t*)msg.data.get(), msg.size);
 
   notifyNewReadingsAvailable();
 }
 
 bool Hub::forEachDevice(
-    std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
+    std::function<bool(const roo_transceivers::DeviceLocator&)> callback)
     const {
   for (size_t i = 0; i < deviceCount(); ++i) {
     if (!callback(DeviceLocator(device(i)))) {
@@ -337,11 +337,11 @@ bool Hub::forEachDevice(
   return true;
 }
 
-bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator &locator,
-                              roo_transceivers_Descriptor &descriptor) const {
+bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator& locator,
+                              roo_transceivers_Descriptor& descriptor) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator, addr)) return false;
-  HubDevice *device = lookupDevice(addr);
+  HubDevice* device = lookupDevice(addr);
   if (device == nullptr) {
     LOG(WARNING) << "Received data message from unknown device " << addr;
     return false;
@@ -351,12 +351,12 @@ bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator &locator,
 }
 
 roo_transceivers::Measurement Hub::read(
-    const roo_transceivers::SensorLocator &locator) const {
+    const roo_transceivers::SensorLocator& locator) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator.device_locator(), addr)) {
     return roo_transceivers::Measurement();
   }
-  HubDevice *device = lookupDevice(addr);
+  HubDevice* device = lookupDevice(addr);
   if (device == nullptr) {
     LOG(WARNING) << "Received data message from unknown device " << addr;
     return roo_transceivers::Measurement();
@@ -364,13 +364,12 @@ roo_transceivers::Measurement Hub::read(
   return device->read(locator.sensor_id());
 }
 
-bool Hub::write(const roo_transceivers::ActuatorLocator &locator,
-                float value) const {
+bool Hub::write(const roo_transceivers::ActuatorLocator& locator, float value) {
   roo_io::MacAddress addr;
   if (!ParseMac(locator.device_locator(), addr)) {
     return false;
   }
-  HubDevice *device = lookupDevice(addr);
+  HubDevice* device = lookupDevice(addr);
   if (device == nullptr) {
     LOG(WARNING) << "Received write request targetet at an unknown device "
                  << addr;
@@ -382,29 +381,29 @@ bool Hub::write(const roo_transceivers::ActuatorLocator &locator,
 void Hub::requestUpdate() {
   size_t count = deviceCount();
   for (size_t i = 0; i < count; ++i) {
-    const roo_io::MacAddress &addr = device(i);
-    HubDevice *device = lookupDevice(addr);
+    const roo_io::MacAddress& addr = device(i);
+    HubDevice* device = lookupDevice(addr);
     if (device == nullptr) continue;
     device->requestUpdate();
   }
 }
 
-void Hub::addEventListener(roo_transceivers::EventListener *listener) {
+void Hub::addEventListener(roo_transceivers::EventListener* listener) {
   listeners_.insert(listener);
 }
 
-void Hub::removeEventListener(roo_transceivers::EventListener *listener) {
+void Hub::removeEventListener(roo_transceivers::EventListener* listener) {
   listeners_.erase(listener);
 }
 
 void Hub::notifyTransceiversChanged() {
-  for (auto *listener : listeners_) {
+  for (auto* listener : listeners_) {
     listener->devicesChanged();
   }
 }
 
 void Hub::notifyNewReadingsAvailable() {
-  for (auto *listener : listeners_) {
+  for (auto* listener : listeners_) {
     listener->newReadingsAvailable();
   }
 }

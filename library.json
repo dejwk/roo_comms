@@ -26,13 +26,14 @@
     ],
     "dependencies": {
         "Wire": ">0",
-        "dejwk/roo_collections": ">=1.1.6",
-        "dejwk/roo_io": ">0",
-        "dejwk/roo_led": ">0",
-        "dejwk/roo_logging": ">=1.0.4",
-        "dejwk/roo_prefs": ">=1.0.3",
-        "dejwk/roo_scheduler": "^2.0.2",
-        "dejwk/roo_time": ">0",
-        "dejwk/roo_transceivers": ">0"
+        "dejwk/roo_blink": ">=1.0.0",
+        "dejwk/roo_collections": ">=1.3.1",
+        "dejwk/roo_control": ">=1.2.0",
+        "dejwk/roo_io": ">=2.0.1",
+        "dejwk/roo_logging": ">=1.4.0",
+        "dejwk/roo_prefs": ">=1.2.0",
+        "dejwk/roo_scheduler": ">=2.1.3",
+        "dejwk/roo_time": ">=1.3.0",
+        "dejwk/roo_transceivers": ">=1.1.0"
     }
 }

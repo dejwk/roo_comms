@@ -15,89 +15,88 @@ namespace roo_comms {
 class Hub : public roo_transceivers::Universe {
  public:
   using PairingRequestCb =
-      std::function<void(const roo_transceivers::DeviceLocator &,
-                         const roo_transceivers_Descriptor &)>;
+      std::function<void(const roo_transceivers::DeviceLocator&,
+                         const roo_transceivers_Descriptor&)>;
 
-  Hub(roo_scheduler::Scheduler &scheduler, HubDeviceFactory &device_factory,
+  Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
       PairingRequestCb pairing_request_cb);
 
   // For testing.
-  Hub(EspNowTransport &transport, roo_scheduler::Scheduler &scheduler,
-      HubDeviceFactory &device_factory, PairingRequestCb pairing_request_cb);
+  Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
+      HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb);
 
   void init(uint8_t channel);
 
-  void onDataRecv(const Source &source, const void *data, size_t len);
+  void onDataRecv(const Source& source, const void* data, size_t len);
 
   size_t deviceCount() const { return transceiver_addresses_.size(); }
 
-  const roo_io::MacAddress &device(size_t idx) const {
+  const roo_io::MacAddress& device(size_t idx) const {
     return transceiver_addresses_[idx];
   }
 
-  HubDevice *lookupDevice(const roo_io::MacAddress &addr) const {
+  HubDevice* lookupDevice(const roo_io::MacAddress& addr) const {
     auto itr = devices_.find(addr);
     return (itr != devices_.end()) ? itr->second.get() : nullptr;
   }
 
-  bool forEachDevice(
-      std::function<bool(const roo_transceivers::DeviceLocator &)> callback)
-      const override;
+  bool forEachDevice(std::function<bool(const roo_transceivers::DeviceLocator&)>
+                         callback) const override;
 
   bool getDeviceDescriptor(
-      const roo_transceivers::DeviceLocator &locator,
-      roo_transceivers_Descriptor &descriptor) const override;
+      const roo_transceivers::DeviceLocator& locator,
+      roo_transceivers_Descriptor& descriptor) const override;
 
   roo_transceivers::Measurement read(
-      const roo_transceivers::SensorLocator &locator) const override;
+      const roo_transceivers::SensorLocator& locator) const override;
 
-  bool write(const roo_transceivers::ActuatorLocator &locator,
-             float value) const override;
+  bool write(const roo_transceivers::ActuatorLocator& locator,
+             float value) override;
 
   void requestUpdate() override;
 
-  void addEventListener(roo_transceivers::EventListener *listener) override;
+  void addEventListener(roo_transceivers::EventListener* listener) override;
 
-  void removeEventListener(roo_transceivers::EventListener *listener) override;
+  void removeEventListener(roo_transceivers::EventListener* listener) override;
 
-  void approvePairing(const roo_transceivers::DeviceLocator &locator);
+  void approvePairing(const roo_transceivers::DeviceLocator& locator);
 
  private:
-  void processMessage(const roo_comms::Receiver::Message &received);
+  void processMessage(const roo_comms::Receiver::Message& received);
 
-  void processDiscoveryRequest(const roo_io::MacAddress &origin,
-                               const roo_comms_DeviceDescriptor &descriptor);
+  void processDiscoveryRequest(const roo_io::MacAddress& origin,
+                               const roo_comms_DeviceDescriptor& descriptor);
 
-  void processPairingRequest(const roo_io::MacAddress &origin,
-                             const roo_comms_DeviceDescriptor &descriptor);
+  void processPairingRequest(const roo_io::MacAddress& origin,
+                             const roo_comms_DeviceDescriptor& descriptor);
 
-  void pair(const roo_io::MacAddress &origin,
-            const roo_comms_DeviceDescriptor &descriptor);
+  void pair(const roo_io::MacAddress& origin,
+            const roo_comms_DeviceDescriptor& descriptor);
 
-  bool checkSupportedType(const roo_comms_DeviceDescriptor &descriptor);
+  bool checkSupportedType(const roo_comms_DeviceDescriptor& descriptor);
 
-  bool addTransceiver(const roo_io::MacAddress &addr,
-                      const roo_comms_DeviceDescriptor &descriptor);
+  bool addTransceiver(const roo_io::MacAddress& addr,
+                      const roo_comms_DeviceDescriptor& descriptor);
 
-  bool removeTransceiver(const roo_io::MacAddress &addr);
+  bool removeTransceiver(const roo_io::MacAddress& addr);
 
-  bool hasTransceiver(const roo_io::MacAddress &addr);
+  bool hasTransceiver(const roo_io::MacAddress& addr);
 
-  void writeTransceiverAddresses(roo_prefs::Transaction &t);
+  void writeTransceiverAddresses(roo_prefs::Transaction& t);
 
-  void processDataMessage(const Receiver::Message &msg);
+  void processDataMessage(const Receiver::Message& msg);
 
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();
 
-  roo_collections::FlatSmallHashSet<roo_transceivers::EventListener *>
+  roo_collections::FlatSmallHashSet<roo_transceivers::EventListener*>
       listeners_;
 
   roo_prefs::Collection store_;
-  EspNowTransport &transport_;
+  EspNowTransport& transport_;
   roo_comms::Receiver receiver_;
 
-  HubDeviceFactory &device_factory_;
+  HubDeviceFactory& device_factory_;
   roo_collections::FlatSmallHashMap<roo_io::MacAddress,
                                     std::unique_ptr<HubDevice>>
       devices_;
