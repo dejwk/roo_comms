@@ -6,6 +6,7 @@
 #include "roo_backport/byte.h"
 #include "roo_io/text/base64.h"
 #include "roo_io/text/string_printf.h"
+#include "roo_transceivers.h"
 
 namespace roo_comms {
 

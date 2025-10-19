@@ -33,7 +33,8 @@
         "dejwk/roo_logging": ">=1.4.0",
         "dejwk/roo_prefs": ">=1.2.0",
         "dejwk/roo_scheduler": ">=2.1.3",
+        "dejwk/roo_threads": ">=1.1.3",
         "dejwk/roo_time": ">=1.3.0",
-        "dejwk/roo_transceivers": ">=1.1.0"
+        "dejwk/roo_transceivers": ">=1.1.1"
     }
 }
