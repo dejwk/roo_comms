@@ -117,6 +117,8 @@ void Hub::pair(const roo_io::MacAddress& origin,
     return;
   }
   SendPairingResponse(transport_, origin);
+  LOG(INFO) << "Paired with device " << origin.asString();
+  notifyTransceiversChanged();
 }
 
 bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor& descriptor) {
@@ -174,6 +176,16 @@ Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
+  restoreDevices();
+  LOG(INFO) << "Registering the ESP-NOW data receiver";
+  transport_.setReceiverFn(
+      [this](const roo_comms::Source& source, const void* data, size_t len) {
+        onDataRecv(source, data, len);
+      });
+}
+
+void Hub::restoreDevices() {
+  LOG(INFO) << "Restoring paired devices from persistent storage";
   transceiver_addresses_.clear();
   std::unique_ptr<roo_io::byte[]> data = nullptr;
   size_t device_count = 0;
@@ -228,11 +240,6 @@ void Hub::init(uint8_t channel) {
     }
     LOG(INFO) << "Loaded info for paired transceiver " << addr;
   }
-
-  transport_.setReceiverFn(
-      [this](const roo_comms::Source& source, const void* data, size_t len) {
-        onDataRecv(source, data, len);
-      });
 }
 
 bool Hub::addTransceiver(const roo_io::MacAddress& addr,
@@ -265,7 +272,6 @@ bool Hub::addTransceiver(const roo_io::MacAddress& addr,
     CHECK_EQ(t.store().writeBytes(addr_key, buf, ostream.bytes_written),
              roo_prefs::WRITE_OK);
   }
-  notifyTransceiversChanged();
   return true;
 }
 

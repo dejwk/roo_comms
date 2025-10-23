@@ -89,6 +89,8 @@ class Hub : public roo_transceivers::Universe {
   void notifyTransceiversChanged();
   void notifyNewReadingsAvailable();
 
+  void restoreDevices();
+
   roo_collections::FlatSmallHashSet<roo_transceivers::EventListener*>
       listeners_;
 
