@@ -25,7 +25,6 @@
         "examples/**/*.ino"
     ],
     "dependencies": {
-        "Wire": ">0",
         "dejwk/roo_blink": ">=1.0.0",
         "dejwk/roo_collections": ">=1.3.1",
         "dejwk/roo_control": ">=1.2.0",
