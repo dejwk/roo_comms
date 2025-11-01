@@ -6,8 +6,7 @@ Button::Button(roo_control::BinarySelector& selector,
                roo_scheduler::Scheduler& scheduler,
                std::function<void(bool)> pressed)
     : roo_control::PushButton(selector),
-      updater_(
-          scheduler, [this]() { tick(); }, roo_time::Millis(10)),
+      updater_(scheduler, roo_time::Millis(10), [this]() { tick(); }),
       pressed_(pressed) {}
 
 RgbLedSignaler::RgbLedSignaler(roo_blink::RgbLed& led,
