@@ -64,23 +64,24 @@ void Hub::processDiscoveryRequest(
       if (!ParseMac(locator, addr)) return;
       SendDiscoveryResponse(transport_, addr);
     }
-    return;
+  } else {
+    pending_pairings_[locator] = {.descriptor = generic_descriptor,
+                                  .state = PendingPairingRequest::kPending};
   }
-  pending_pairings_[locator] = {.descriptor = generic_descriptor,
-                                .state = PendingPairingRequest::kPending};
   pairing_request_cb_(locator, generic_descriptor);
 }
 
-void Hub::approvePairing(const roo_transceivers::DeviceLocator& locator) {
+bool Hub::approvePairing(const roo_transceivers::DeviceLocator& locator) {
   auto itr = pending_pairings_.find(locator);
   if (itr == pending_pairings_.end()) {
     LOG(WARNING) << "Pairing request for " << locator << " not found";
-    return;
+    return false;
   }
   itr->second.state = PendingPairingRequest::kApproved;
   roo_io::MacAddress addr;
-  if (!ParseMac(locator, addr)) return;
+  if (!ParseMac(locator, addr)) return false;
   SendDiscoveryResponse(transport_, addr);
+  return true;
 }
 
 void Hub::processPairingRequest(const roo_io::MacAddress& origin,

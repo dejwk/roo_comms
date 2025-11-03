@@ -59,7 +59,9 @@ class Hub : public roo_transceivers::Universe {
 
   void removeEventListener(roo_transceivers::EventListener* listener) override;
 
-  void approvePairing(const roo_transceivers::DeviceLocator& locator);
+  // Returns true if the pairing request was successfully acknowledged;
+  // false if the request was no longer pending.
+  bool approvePairing(const roo_transceivers::DeviceLocator& locator);
 
  private:
   void processMessage(const roo_comms::Receiver::Message& received);
