@@ -54,9 +54,67 @@ bool EspNowPeer::sendAsync(const void* data, size_t len) {
 
 bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
                            size_t len) {
-  roo_io::MacAddress addr(peer.peer_.peer_addr);
+  return sendImpl(peer.peer_.peer_addr, &peer.peer_, data, len);
+}
+
+bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
+                                size_t len) {
+  return sendAsyncImpl(peer.peer_.peer_addr, &peer.peer_, data, len);
+}
+
+bool EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
+                               size_t len) {
+  return sendImpl(addr, nullptr, data, len);
+}
+
+bool EspNowTransport::sendOnceAsync(const roo_io::MacAddress& addr,
+                                    const void* data, size_t len) {
+  return sendAsyncImpl(addr, nullptr, data, len);
+}
+
+void EspNowTransport::broadcastAsync(const void* data, size_t len) {
+  sendAsyncImpl(roo_io::MacAddress::Broadcast(), nullptr, data, len);
+}
+
+esp_now_peer_info_t* EspNowTransport::getOrCreateAutoPeer(
+    const roo_io::MacAddress& addr) {
+  auto itr = auto_peers_.find(addr);
+  if (itr != auto_peers_.end()) {
+    itr->second->refcount++;
+    return &itr->second->peer;
+  }
+  AutoPeer* auto_peer = new AutoPeer();
+  auto_peer->refcount = 1;
+  addr.writeTo(auto_peer->peer.peer_addr);
+  auto_peer->peer.channel = channel_;
+  auto_peer->peer.encrypt = 0;  // no encryption
+  ESP_ERROR_CHECK(esp_now_add_peer(&auto_peer->peer));
+  auto_peers_[addr] = auto_peer;
+  return &auto_peer->peer;
+}
+
+void EspNowTransport::releaseAutoPeer(const roo_io::MacAddress& addr) {
+  auto itr = auto_peers_.find(addr);
+  if (itr == auto_peers_.end()) {
+    LOG(ERROR) << "Releasing non-existing auto peer: " << addr;
+    return;
+  }
+  AutoPeer* auto_peer = itr->second;
+  auto_peer->refcount--;
+  if (auto_peer->refcount == 0) {
+    ESP_ERROR_CHECK(esp_now_del_peer(auto_peer->peer.peer_addr));
+    auto_peers_.erase(addr);
+    delete auto_peer;
+  }
+}
+
+bool EspNowTransport::sendImpl(const roo_io::MacAddress& addr,
+                               const esp_now_peer_info_t* peer,
+                               const void* data, size_t len) {
+  bool autopeer = (peer == nullptr);
   {
     roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
+    if (peer == nullptr) peer = getOrCreateAutoPeer(addr);
     while (true) {
       auto itr = pending_.find(addr);
       if (itr == pending_.end()) {
@@ -66,14 +124,14 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
       pending_emptied_.wait(lock);
     }
   }
-  esp_err_t result =
-      esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
+  esp_err_t result = esp_now_send(peer->peer_addr, (const uint8_t*)data, len);
   if (result != ESP_OK) {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
     roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
     pending_.erase(addr);
     pending_emptied_.notify_all();
+    if (autopeer) releaseAutoPeer(addr);
     return false;
   }
   // Wait for the send to be acknowledged.
@@ -97,17 +155,23 @@ bool EspNowTransport::send(const EspNowPeer& peer, const void* data,
       CHECK_EQ(pending.status, Outbox::kSyncPending);
       pending_emptied_.wait(lock);
     }
+    MLOG(roo_esp_now_transport)
+        << "Sent sync packet of " << len << " bytes to: " << addr
+        << ", success=" << is_success;
     pending_.erase(addr);
     pending_emptied_.notify_all();
+    if (autopeer) releaseAutoPeer(addr);
     return is_success;
   }
 }
 
-bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
-                                size_t len) {
-  roo_io::MacAddress addr(peer.peer_.peer_addr);
+bool EspNowTransport::sendAsyncImpl(const roo_io::MacAddress& addr,
+                                    const esp_now_peer_info_t* peer,
+                                    const void* data, size_t len) {
+  bool autopeer = (peer == nullptr);
   while (true) {
     roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
+    if (peer == nullptr) peer = getOrCreateAutoPeer(addr);
     auto itr = pending_.find(addr);
     if (itr == pending_.end()) {
       pending_[addr] = Outbox(Outbox::kAsyncPending);
@@ -122,13 +186,8 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
     // failures properly.
     pending_emptied_.wait(lock);
   }
-  esp_err_t result =
-      esp_now_send(peer.peer_.peer_addr, (const uint8_t*)data, len);
-  if (result == ESP_OK) {
-    MLOG(roo_esp_now_transport)
-        << "Sending packet of " << len << " bytes to: " << addr;
-    return true;
-  } else {
+  esp_err_t result = esp_now_send(peer->peer_addr, (const uint8_t*)data, len);
+  if (result != ESP_OK) {
     LOG(ERROR) << "ESP-NOW sending data message failed with code "
                << (int)result;
     roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
@@ -137,24 +196,19 @@ bool EspNowTransport::sendAsync(const EspNowPeer& peer, const void* data,
     pending.count--;
     if (pending.count == 0) {
       pending_.erase(addr);
-      pending_emptied_.wait(lock);
+      pending_emptied_.notify_all();
     }
+    if (autopeer) releaseAutoPeer(addr);
     return false;
   }
-}
-
-bool EspNowTransport::sendOnce(const roo_io::MacAddress& addr, const void* data,
-                               size_t len) {
-  return send(EspNowPeer(*this, addr), data, len);
-}
-
-bool EspNowTransport::sendOnceAsync(const roo_io::MacAddress& addr,
-                                    const void* data, size_t len) {
-  return sendAsync(EspNowPeer(*this, addr), data, len);
-}
-
-void EspNowTransport::broadcastAsync(const void* data, size_t len) {
-  sendAsync(EspNowPeer(*this, roo_io::MacAddress::Broadcast()), data, len);
+  // Not waiting for send ack.
+  MLOG(roo_esp_now_transport)
+      << "Sent async packet of " << len << " bytes to: " << addr;
+  if (autopeer) {
+    roo::unique_lock<roo::mutex> lock(pending_send_mutex_);
+    releaseAutoPeer(addr);
+  }
+  return true;
 }
 
 void EspNowTransport::ackSent(const roo_io::MacAddress& addr, bool success) {
@@ -188,7 +242,7 @@ void EspNowTransport::onDataRecv(const roo_io::MacAddress& addr,
                                  const void* data, size_t len) {
   if (receiver_fn_ == nullptr) {
     LOG(WARNING) << "Received data from " << addr
-                << " but no receiver function is set. Ignoring.";
+                 << " but no receiver function is set. Ignoring.";
     return;
   }
   Source source{.addr = addr};

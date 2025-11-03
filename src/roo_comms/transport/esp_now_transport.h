@@ -65,7 +65,7 @@ class EspNowTransport {
                      size_t len);
 
   void broadcastAsync(const void* data, size_t len);
-  
+
   // Must be called by the registered ESP-NOW callback. Otherwise, memory leaks
   // and deadlocks may occur.
   void ackSent(const roo_io::MacAddress& addr, bool success);
@@ -82,16 +82,42 @@ class EspNowTransport {
       kSyncFailed
     };
     Outbox() : status(kDone), count(0) {}
+
     Outbox(Status status) : status(status), count(1) {}
+
     Status status;
+    // Count of pending requests.
     int count;
   };
+
+  struct AutoPeer {
+    int refcount;
+    esp_now_peer_info_t peer;
+  };
+
+  // Guarded by the pending_send_mutex_.
+  esp_now_peer_info_t* getOrCreateAutoPeer(const roo_io::MacAddress& addr);
+
+  // Guarded by the pending_send_mutex_.
+  void releaseAutoPeer(const roo_io::MacAddress& addr);
+
+  bool sendImpl(const roo_io::MacAddress& addr, const esp_now_peer_info_t* peer,
+                const void* data, size_t len);
+
+  bool sendAsyncImpl(const roo_io::MacAddress& addr,
+                     const esp_now_peer_info_t* peer, const void* data,
+                     size_t len);
 
   ReceiverFn receiver_fn_;
   friend class EspNowPeer;
   roo::mutex pending_send_mutex_;
   roo::condition_variable pending_emptied_;
+
+  // Map of pending outboxes (unacknowledged requests).
   roo_collections::FlatSmallHashMap<roo_io::MacAddress, Outbox> pending_;
+
+  // Map of auto-created peers, used by sendOnce/sendOnceAsync.
+  roo_collections::FlatSmallHashMap<roo_io::MacAddress, AutoPeer*> auto_peers_;
 
   uint8_t channel_;
 };
