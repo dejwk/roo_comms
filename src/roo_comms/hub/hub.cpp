@@ -87,7 +87,8 @@ bool Hub::approvePairing(const roo_transceivers::DeviceLocator& locator) {
 void Hub::processPairingRequest(const roo_io::MacAddress& origin,
                                 const roo_comms_DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
-  auto itr = pending_pairings_.find(DeviceLocator(origin));
+  auto locator = DeviceLocator(origin);
+  auto itr = pending_pairings_.find(locator);
   if (itr == pending_pairings_.end()) {
     return;
   }
@@ -109,6 +110,7 @@ void Hub::processPairingRequest(const roo_io::MacAddress& origin,
   }
   pair(origin, descriptor);
   pending_pairings_.erase(itr);
+  pairing_confirmed_cb_(locator);
 }
 
 void Hub::pair(const roo_io::MacAddress& origin,
@@ -157,12 +159,13 @@ void Hub::processMessage(const roo_comms::Receiver::Message& received) {
 }
 
 Hub::Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
-         PairingRequestCb pairing_request_cb)
+         PairingRequestCb pairing_request_cb, PairingConfirmedCb pairing_confirmed_cb)
     : Hub(Transport(), scheduler, device_factory,
-          std::move(pairing_request_cb)) {}
+          std::move(pairing_request_cb), std::move(pairing_confirmed_cb)) {}
 
 Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
-         HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb)
+         HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
+         PairingConfirmedCb pairing_confirmed_cb)
     : store_("hub"),
       transport_(transport),
       receiver_(
@@ -173,6 +176,7 @@ Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
           100, 8, 256, nullptr),
       device_factory_(device_factory),
       pairing_request_cb_(std::move(pairing_request_cb)),
+      pairing_confirmed_cb_(std::move(pairing_confirmed_cb)),
       next_pairing_request_id_(0) {}
 
 void Hub::init(uint8_t channel) {

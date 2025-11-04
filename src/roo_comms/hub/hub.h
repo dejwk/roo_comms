@@ -18,12 +18,17 @@ class Hub : public roo_transceivers::Universe {
       std::function<void(const roo_transceivers::DeviceLocator&,
                          const roo_transceivers_Descriptor&)>;
 
+  using PairingConfirmedCb =
+      std::function<void(const roo_transceivers::DeviceLocator&)>;
+
   Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
-      PairingRequestCb pairing_request_cb);
+      PairingRequestCb pairing_request_cb,
+      PairingConfirmedCb pairing_confirmed_cb);
 
   // For testing.
   Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
-      HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb);
+      HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
+      PairingConfirmedCb pairing_confirmed_cb);
 
   void init(uint8_t channel);
 
@@ -119,16 +124,15 @@ class Hub : public roo_transceivers::Universe {
                                     PendingPairingRequest>
       pending_pairings_;
 
-  //   // Pending pairing requests that have been approved.
-  //   roo_collections::FlatSmallHashMap<roo_transceivers::DeviceLocator,
-  //                                     roo_transceivers_Descriptor>
-  //       approved_pairings_;
-
   // Callback to be invoked when we receive a broadcast discovery request. It
   // can be used to start interaction with a human, to check if we should
   // respond to this request or ignore it. When the request gets approved, the
   // `approvePairing` method should be called to complete the pairing process.
   PairingRequestCb pairing_request_cb_;
+
+  // Callback to be invoked when the device has actually requested pairing and
+  // we replied affirmatively.
+  PairingConfirmedCb pairing_confirmed_cb_;
 };
 
 }  // namespace roo_comms
