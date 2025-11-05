@@ -84,6 +84,12 @@ bool Hub::approvePairing(const roo_transceivers::DeviceLocator& locator) {
   return true;
 }
 
+bool Hub::removePairing(const roo_transceivers::DeviceLocator& locator) {
+  roo_io::MacAddress addr;
+  if (!ParseMac(locator, addr)) return false;
+  return removeTransceiver(addr);
+}
+
 void Hub::processPairingRequest(const roo_io::MacAddress& origin,
                                 const roo_comms_DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
@@ -309,6 +315,10 @@ bool Hub::removeTransceiver(const roo_io::MacAddress& addr) {
 
 void Hub::writeTransceiverAddresses(roo_prefs::Transaction& t) {
   size_t len = transceiver_addresses_.size() * 6;
+  if (len == 0) {
+    CHECK_EQ(t.store().clear(kMacsKey), roo_prefs::CLEAR_OK);
+    return;
+  }
   std::unique_ptr<roo_io::byte[]> encoded(new roo_io::byte[len]);
   for (size_t i = 0; i < transceiver_addresses_.size(); ++i) {
     transceiver_addresses_[i].writeTo(&encoded[i * 6]);

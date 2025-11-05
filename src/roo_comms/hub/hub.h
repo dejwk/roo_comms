@@ -68,6 +68,8 @@ class Hub : public roo_transceivers::Universe {
   // false if the request was no longer pending.
   bool approvePairing(const roo_transceivers::DeviceLocator& locator);
 
+  bool removePairing(const roo_transceivers::DeviceLocator& locator);
+
  private:
   void processMessage(const roo_comms::Receiver::Message& received);
 
