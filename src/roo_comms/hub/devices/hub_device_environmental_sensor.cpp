@@ -20,6 +20,7 @@ HubDeviceEnvironmentalSensor::HubDeviceEnvironmentalSensor(
         descriptor)
     : HubDevice(transport, destination),
       descriptor_(descriptor),
+      state_{},
       last_reading_(roo_time::Uptime::Start()) {}
 
 void HubDeviceEnvironmentalSensor::getDescriptor(
