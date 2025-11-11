@@ -107,14 +107,16 @@ void Hub::processPairingRequest(const roo_io::MacAddress& origin,
     LOG(WARNING) << "Factory failed to create device for " << origin;
     return;
   }
-  roo_transceivers_Descriptor new_descriptor;
-  device->getDescriptor(new_descriptor);
-  if (!(itr->second.descriptor == new_descriptor)) {
-    LOG(WARNING) << "Pairing request from " << origin
-                 << " does not match approved descriptor";
-    return;
+  {
+    roo_transceivers_Descriptor new_descriptor;
+    device->getDescriptor(new_descriptor);
+    if (!(itr->second.descriptor == new_descriptor)) {
+      LOG(WARNING) << "Pairing request from " << origin
+                   << " does not match approved descriptor";
+      return;
+    }
+    pair(origin, descriptor);
   }
-  pair(origin, descriptor);
   pending_pairings_.erase(itr);
   pairing_confirmed_cb_(locator);
 }
@@ -165,9 +167,10 @@ void Hub::processMessage(const roo_comms::Receiver::Message& received) {
 }
 
 Hub::Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
-         PairingRequestCb pairing_request_cb, PairingConfirmedCb pairing_confirmed_cb)
-    : Hub(Transport(), scheduler, device_factory,
-          std::move(pairing_request_cb), std::move(pairing_confirmed_cb)) {}
+         PairingRequestCb pairing_request_cb,
+         PairingConfirmedCb pairing_confirmed_cb)
+    : Hub(Transport(), scheduler, device_factory, std::move(pairing_request_cb),
+          std::move(pairing_confirmed_cb)) {}
 
 Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
          HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
