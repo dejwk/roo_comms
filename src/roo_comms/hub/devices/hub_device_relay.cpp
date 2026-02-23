@@ -8,20 +8,19 @@ namespace roo_comms {
 
 HubDeviceRelay::HubDeviceRelay(EspNowTransport& transport,
                                const roo_io::MacAddress& destination,
-                               int relay_count)
+                               size_t relay_count)
     : HubDevice(transport, destination),
       relay_count_(relay_count),
       state_(0),
       last_reading_(roo_time::Uptime::Start()) {}
 
-void HubDeviceRelay::getDescriptor(
-    roo_transceivers_Descriptor& result) const {
+void HubDeviceRelay::getDescriptor(roo_transceivers_Descriptor& result) const {
   result.actuators_count = relay_count_;
   result.sensors_count = relay_count_;
   for (size_t i = 0; i < relay_count_; ++i) {
-    snprintf(result.sensors[i].id, 24, "relay_%d", i + 1);
+    snprintf(result.sensors[i].id, 24, "relay_%zu", i + 1);
     result.sensors[i].quantity = roo_transceivers_Quantity_kBinaryState;
-    snprintf(result.actuators[i].id, 24, "relay_%d", i + 1);
+    snprintf(result.actuators[i].id, 24, "relay_%zu", i + 1);
     result.actuators[i].quantity = roo_transceivers_Quantity_kBinaryState;
   }
 }

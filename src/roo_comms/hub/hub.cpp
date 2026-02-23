@@ -184,9 +184,9 @@ Hub::Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
           },
           100, 8, 256, nullptr),
       device_factory_(device_factory),
+      next_pairing_request_id_(0),
       pairing_request_cb_(std::move(pairing_request_cb)),
-      pairing_confirmed_cb_(std::move(pairing_confirmed_cb)),
-      next_pairing_request_id_(0) {}
+      pairing_confirmed_cb_(std::move(pairing_confirmed_cb)) {}
 
 void Hub::init(uint8_t channel) {
   transport_.setChannel(channel);
@@ -297,7 +297,7 @@ bool Hub::removeTransceiver(const roo_io::MacAddress& addr) {
     return false;
   }
   devices_.erase(addr);
-  if (itr - transceiver_addresses_.begin() ==
+  if ((size_t)(itr - transceiver_addresses_.begin()) ==
       transceiver_addresses_.size() - 1) {
     // Itr is already the last element. Just remove it.
     transceiver_addresses_.pop_back();

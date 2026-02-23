@@ -9,7 +9,7 @@ namespace roo_comms {
 class HubDeviceRelay : public HubDevice {
  public:
   HubDeviceRelay(EspNowTransport& transport,
-                 const roo_io::MacAddress& destination, int relay_count);
+                 const roo_io::MacAddress& destination, size_t relay_count);
 
   void getDescriptor(roo_transceivers_Descriptor& result) const override;
 
@@ -24,7 +24,7 @@ class HubDeviceRelay : public HubDevice {
   void updateState(const uint8_t* data, size_t len) override;
 
  private:
-  int relay_count_;
+  size_t relay_count_;
   uint32_t state_;
   roo_time::Uptime last_reading_;
 };
