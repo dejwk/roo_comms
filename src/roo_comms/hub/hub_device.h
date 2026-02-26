@@ -10,6 +10,7 @@
 
 namespace roo_comms {
 
+/// Base class for hub-side device adapters.
 class HubDevice {
  public:
   HubDevice(const roo_io::MacAddress& destination)
@@ -21,18 +22,23 @@ class HubDevice {
 
   virtual ~HubDevice() = default;
 
+  /// Returns the device descriptor exposed to the hub.
   virtual void getDescriptor(roo_transceivers_Descriptor& result) const = 0;
 
+  /// Reads a sensor value.
   virtual roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const = 0;
 
+  /// Writes an actuator value (optional).
   virtual bool write(const roo_transceivers::ActuatorId& actuator_id,
                      float value) const {
     return false;
   }
 
+  /// Requests a fresh update (optional).
   virtual void requestUpdate() const {}
 
+  /// Updates internal state from a received message.
   virtual void updateState(const uint8_t* data, size_t len) = 0;
 
  protected:

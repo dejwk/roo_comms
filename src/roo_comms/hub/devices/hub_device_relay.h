@@ -6,6 +6,7 @@
 
 namespace roo_comms {
 
+/// Hub device adapter for relay devices.
 class HubDeviceRelay : public HubDevice {
  public:
   HubDeviceRelay(EspNowTransport& transport,

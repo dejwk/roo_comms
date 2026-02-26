@@ -27,12 +27,14 @@ using roo_time::Millis;
 
 namespace roo_comms {
 
+/// Push-button helper that invokes a callback on click/long-press.
 class Button : public roo_control::PushButton {
  public:
   Button(roo_control::BinarySelector& selector,
          roo_scheduler::Scheduler& scheduler,
          std::function<void(bool is_long_pressed)> pressed);
 
+  /// Starts periodic polling of the button.
   void start() { updater_.start(); }
 
  protected:
@@ -44,8 +46,10 @@ class Button : public roo_control::PushButton {
   std::function<void(bool)> pressed_;
 };
 
+/// Device-side pairing state machine and peer management.
 class PairableDevice {
  public:
+  /// Pairing state.
   enum State {
     kStartup = 0,
     kNotPaired = 1,
@@ -55,11 +59,13 @@ class PairableDevice {
     kSleep = 5,
   };
 
+  /// Initial state when starting up.
   enum InitialState {
     kColdStart = 0,  // Regular.
     kWakeup = 1,     // Coming back from deep sleep.
   };
 
+  /// Interface for signaling pairing state to the user.
   class StateSignaler {
    public:
     virtual ~StateSignaler() = default;
@@ -93,7 +99,7 @@ class PairableDevice {
 
   void begin(InitialState initial_state = kColdStart);
 
-  // Should be called instead of begin() when coming back from deep sleep.
+  /// Should be called instead of begin() when coming back from deep sleep.
   void wakeup();
 
   State state() const { return state_; }
@@ -153,6 +159,7 @@ class PairableDevice {
   Button button_;
 };
 
+/// RGB LED-based signaler for pairing state.
 class RgbLedSignaler : public PairableDevice::StateSignaler {
  public:
   RgbLedSignaler(roo_blink::RgbLed& led, roo_scheduler::Scheduler& scheduler);
@@ -170,6 +177,7 @@ class RgbLedSignaler : public PairableDevice::StateSignaler {
   roo_blink::RgbBlinker blinker_;
 };
 
+/// Monochrome LED-based signaler for pairing state.
 class MonochromeLedSignaler : public PairableDevice::StateSignaler {
  public:
   MonochromeLedSignaler(roo_blink::Led& led,

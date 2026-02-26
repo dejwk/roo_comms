@@ -3,6 +3,7 @@
 #include "roo_comms/hub/hub_device_factory.h"
 
 namespace roo_comms {
+/// Factory for home-automation hub devices.
 class HomeAutomationDeviceFactory : public HubDeviceFactory {
  public:
   bool isDeviceSupported(

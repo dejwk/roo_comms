@@ -19,12 +19,11 @@
 #include "roo_threads/condition_variable.h"
 #include "roo_threads/mutex.h"
 
-// This file abstracts away ESP-NOW so that it can be more easily unit-tested.
-// Additionally, it adds some convenience features, such as synchronous send,
-// simple broadcast, etc.
+/// ESP-NOW transport abstraction for easier testing and convenience helpers.
 
 namespace roo_comms {
 
+/// Parses a payload as a control message.
 bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
                                 roo_comms_ControlMessage& msg);
 
@@ -34,42 +33,45 @@ class EspNowTransport {
  public:
   EspNowTransport() : channel_(0) {}
 
+  /// Initializes ESP-NOW and optional protocol mode.
   void begin(Mode mode);
+  /// Shuts down ESP-NOW transport.
   void end();
 
+  /// Returns the current Wi-Fi channel.
   uint8_t channel() const { return channel_; }
 
-  // Must be called after Wifi is initialized.
+  /// Sets the Wi-Fi channel (call after Wi-Fi initialization).
   void setChannel(uint8_t channel);
 
+  /// Registers receiver callback.
   void setReceiverFn(ReceiverFn receiver_fn);
 
-  // Sends a message and waits until it gets delivered to the recipient ESP
-  // service. Usually takes a few ms. Returns true if delivery was successful;
-  // false otherwise.
-  //
-  // FIFO delivery order is guaranteed per recipient.
+  /// Sends and waits for delivery to the recipient ESP service.
+  ///
+  /// Usually takes a few ms. Returns true if delivery was successful; false
+  /// otherwise. FIFO delivery order is guaranteed per recipient.
   bool send(const EspNowPeer& peer, const void* data, size_t len);
 
-  // Sends a message without waiting for delivery. Returns true if the message
-  // was successfully enqueued; false otherwise.
+  /// Sends without waiting for delivery.
+  ///
+  /// Returns true if the message was enqueued; false otherwise.
   bool sendAsync(const EspNowPeer& peer, const void* data, size_t len);
 
-  // Similar to send, but doesn't require a preconfigured peer; just a MAC
-  // address.
+  /// Like send(), but for a raw MAC address without a configured peer.
   bool sendOnce(const roo_io::MacAddress& addr, const void* data, size_t len);
 
-  // Similar to sendAsync, but doesn't require a preconfigured peer; just a MAC
-  // address.
+  /// Like sendAsync(), but for a raw MAC address without a configured peer.
   bool sendOnceAsync(const roo_io::MacAddress& addr, const void* data,
                      size_t len);
 
+  /// Broadcasts a message without waiting for delivery.
   void broadcastAsync(const void* data, size_t len);
 
-  // Must be called by the registered ESP-NOW callback. Otherwise, memory leaks
-  // and deadlocks may occur.
+  /// Must be called by the ESP-NOW send callback to release pending sends.
   void ackSent(const roo_io::MacAddress& addr, bool success);
 
+  /// Must be called by the ESP-NOW receive callback.
   void onDataRecv(const roo_io::MacAddress& addr, const void* data, size_t len);
 
  private:
@@ -127,15 +129,15 @@ class EspNowPeer {
   EspNowPeer(EspNowTransport& transport, const roo_io::MacAddress& addr);
 
   ~EspNowPeer();
-  // Sends a message and waits until it gets delivered to the peer ESP
-  // service. Usually takes a few ms. Returns true if delivery was successful;
-  // false otherwise.
-  //
-  // FIFO delivery order is guaranteed per peer.
+  /// Sends and waits for delivery to the peer ESP service.
+  ///
+  /// Usually takes a few ms. Returns true if delivery was successful; false
+  /// otherwise. FIFO delivery order is guaranteed per peer.
   bool send(const void* data, size_t len);
 
-  // Sends a message without waiting for delivery. Returns true if the message
-  // was successfully enqueued; false otherwise.
+  /// Sends without waiting for delivery.
+  ///
+  /// Returns true if the message was enqueued; false otherwise.
   bool sendAsync(const void* data, size_t len);
 
  private:

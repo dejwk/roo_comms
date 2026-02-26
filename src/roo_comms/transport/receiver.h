@@ -10,8 +10,10 @@
 
 namespace roo_comms {
 
+/// Receiver that validates, queues, and processes incoming messages.
 class Receiver {
  public:
+  /// Raw message container.
   struct Message {
     roo_io::MacAddress source;
     size_t size;
@@ -21,12 +23,15 @@ class Receiver {
   using ProcessorFn = std::function<void(const Message&)>;
   using ValidatorFn = std::function<bool(const roo_io::byte* data, size_t len)>;
 
+  /// Creates a receiver with validation and queue limits.
   Receiver(roo_scheduler::Scheduler& scheduler, ProcessorFn processor_fn,
            size_t max_queue_size, size_t min_msg_size, size_t max_msg_size,
            ValidatorFn validator_fn);
 
+  /// Handles an incoming frame and enqueues it if valid.
   void handle(const Source& source, const void* incoming_data, size_t len);
 
+  /// Processes queued messages.
   void processMessages();
 
  private:

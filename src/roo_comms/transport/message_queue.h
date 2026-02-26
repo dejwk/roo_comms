@@ -7,14 +7,16 @@
 
 namespace roo_comms {
 
+/// Thread-safe message queue with a non-empty callback.
 template <typename Message>
 class MessageQueue {
  public:
   MessageQueue(std::function<void()> nonempty_cb)
       : nonempty_cb_(std::move(nonempty_cb)) {}
 
-  // Can be called from latency-sensitive contexts. Enqueues the message without
-  // calling its processing code immediately.
+  /// Enqueues a message without immediate processing.
+  ///
+  /// Can be called from latency-sensitive contexts.
   void push(Message msg) {
     bool was_empty = false;
     {
@@ -27,6 +29,7 @@ class MessageQueue {
     }
   }
 
+  /// Pops the next message into `msg`. Returns false if empty.
   bool pop(Message &msg) {
     roo::lock_guard<roo::mutex> lock(mutex_);
     if (queue_.empty()) {
@@ -37,6 +40,7 @@ class MessageQueue {
     return true;
   }
 
+  /// Returns the current queue size.
   size_t size() const { return queue_.size(); }
 
  private:

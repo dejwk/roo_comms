@@ -6,6 +6,7 @@
 
 namespace roo_comms {
 
+/// Hub device adapter for environmental sensors.
 class HubDeviceEnvironmentalSensor : public HubDevice {
  public:
   HubDeviceEnvironmentalSensor(

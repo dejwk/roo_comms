@@ -12,6 +12,7 @@
 
 namespace roo_comms {
 
+/// Hub that manages paired devices and exposes them as a transceiver universe.
 class Hub : public roo_transceivers::Universe {
  public:
   using PairingRequestCb =
@@ -30,31 +31,48 @@ class Hub : public roo_transceivers::Universe {
       HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
       PairingConfirmedCb pairing_confirmed_cb);
 
+  /// Initializes the hub and sets the ESP-NOW channel.
   void init(uint8_t channel);
 
+  /// Entry point for incoming data frames.
   void onDataRecv(const Source& source, const void* data, size_t len);
 
+  /// Returns the number of paired devices known to the hub.
   size_t deviceCount() const { return transceiver_addresses_.size(); }
 
+  /// Returns the device address at index `idx`.
   const roo_io::MacAddress& device(size_t idx) const {
     return transceiver_addresses_[idx];
   }
 
+  /// Returns the hub device for `addr`, or nullptr if not found.
   HubDevice* lookupDevice(const roo_io::MacAddress& addr) const {
     auto itr = devices_.find(addr);
     return (itr != devices_.end()) ? itr->second.get() : nullptr;
   }
 
+  /// Iterates over devices in the hub.
+  ///
+  /// Returns true if iteration completed; false if interrupted.
   bool forEachDevice(std::function<bool(const roo_transceivers::DeviceLocator&)>
                          callback) const override;
 
+  /// Retrieves the descriptor for the specified device.
+  ///
+  /// Returns true on success; false if the device is unknown.
   bool getDeviceDescriptor(
       const roo_transceivers::DeviceLocator& locator,
       roo_transceivers_Descriptor& descriptor) const override;
 
+  /// Reads a sensor measurement.
+  ///
+  /// Returns an initial/unspecified measurement if not found.
   roo_transceivers::Measurement read(
       const roo_transceivers::SensorLocator& locator) const override;
 
+  /// Writes to an actuator.
+  ///
+  /// Returns true on success; false if the actuator is unknown or write fails.
   bool write(const roo_transceivers::ActuatorLocator& locator,
              float value) override;
 
@@ -64,10 +82,15 @@ class Hub : public roo_transceivers::Universe {
 
   void removeEventListener(roo_transceivers::EventListener* listener) override;
 
-  // Returns true if the pairing request was successfully acknowledged;
-  // false if the request was no longer pending.
+  /// Approves a pending pairing request.
+  ///
+  /// Returns true if the request was acknowledged; false if it was no longer
+  /// pending.
   bool approvePairing(const roo_transceivers::DeviceLocator& locator);
 
+  /// Removes a pending pairing request.
+  ///
+  /// Returns true if a pending request was removed; false otherwise.
   bool removePairing(const roo_transceivers::DeviceLocator& locator);
 
  private:
