@@ -6,6 +6,15 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
 bazel_dep(name = "nanopb", version = "0.4.9.1.bcr.2")
 
+archive_override(
+	module_name = "nanopb",
+	urls = ["https://github.com/nanopb/nanopb/releases/download/nanopb-0.4.9.1/nanopb-0.4.9.1.tar.gz"],
+	integrity = "sha256-iCzYRzrZMrJHh+Z2qAjk+ynBLghtILy/usxmwYMJS1w=",
+	strip_prefix = "nanopb",
+	patches = ["//bazel/patches:nanopb_bazel9.patch"],
+	patch_strip = 1,
+)
+
 bazel_dep(name = "roo_blink", version = "1.0.6")
 bazel_dep(name = "roo_collections", version = "1.4.3")
 bazel_dep(name = "roo_control", version = "1.2.5")

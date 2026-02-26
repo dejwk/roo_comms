@@ -1,0 +1,13 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 3bd8c1d..f2a6d14 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -3,6 +3,8 @@ load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+ # Note: if you are still using WORKSPACE, you will need to patch this file to use the following instead
+ # load("@python_3_11//:defs.bzl", "py_binary")
+ load("@python_versions//3.11:defs.bzl", "py_binary")
++load("@rules_cc//cc:cc_library.bzl", "cc_library")
++load("@rules_cc//cc:cc_test.bzl", "cc_test")
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+ load("@rules_proto_grpc//:defs.bzl", "proto_plugin")
+ load("@rules_python//python:proto.bzl", "py_proto_library")
