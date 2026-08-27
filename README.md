@@ -2,6 +2,21 @@
 
 Communication abstractions and helpers for Roo applications.
 
+## Examples
+
+`relay_controller` and `relay_device` form an ESP-NOW request-response pair.
+The controller reads and toggles a relay, while the device applies each request
+and returns its current state. To run either side with its compile-guarded fake
+peer in the host emulator:
+
+    bazel run //examples/relay_controller
+    bazel run //examples/relay_device
+
+Both examples continue running until interrupted with Ctrl-C. For physical
+hardware, flash the two sketches to separate ESP32 boards, keep their
+`kWiFiChannel` values equal, and copy the MAC printed by `relay_device` into
+`kRelayAddress` in `relay_controller`.
+
 ## Host emulation
 
 Host builds use the roo_testing 2.0 Arduino ESP32 profile. With Bazelisk 1.21
