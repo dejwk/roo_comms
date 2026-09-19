@@ -1,3 +1,12 @@
+# roo_comms 1.1.6
+
+- Upgrade Bazel and PlatformIO dependencies, including roo_time 2.0.0, roo_io 2.3.0, roo_scheduler 2.2.0, roo_transceivers 1.2.0, and roo_blink 1.1.0.
+- Update Bazel tooling and test dependencies: rules_cc 0.2.25, GoogleTest 1.18.0.bcr.1, and nanopb 0.4.9.1.bcr.3.
+- Update shared CI workflows to roo_testing 2.1.2.
+- Add consolidated release notes for previous releases.
+
+---
+
 # [roo_comms 1.1.5](https://github.com/dejwk/roo_comms/releases/tag/1.1.5)
 
 Published 2026-08-30.
