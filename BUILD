@@ -1,11 +1,11 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_library(
     name = "roo_comms",
     srcs = glob(
         [
             "src/**/*.cpp",
-            "src/**/*.c",
             "src/**/*.h",
         ],
         exclude = ["test/**"],
@@ -15,7 +15,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@nanopb",
+        "@roo_pb",
         "@roo_blink",
         "@roo_collections",
         "@roo_control",
@@ -27,5 +27,15 @@ cc_library(
         "@roo_threads",
         "@roo_time",
         "@roo_transceivers",
+    ],
+)
+
+cc_test(
+    name = "protocol_test",
+    size = "small",
+    srcs = ["test/protocol_test.cpp"],
+    deps = [
+        ":roo_comms",
+        "@googletest//:gtest_main",
     ],
 )

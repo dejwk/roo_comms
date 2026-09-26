@@ -17,7 +17,7 @@ class Hub : public roo_transceivers::Universe {
  public:
   using PairingRequestCb =
       std::function<void(const roo_transceivers::DeviceLocator&,
-                         const roo_transceivers_Descriptor&)>;
+                         const roo_transceivers::Descriptor&)>;
 
   using PairingConfirmedCb =
       std::function<void(const roo_transceivers::DeviceLocator&)>;
@@ -62,7 +62,7 @@ class Hub : public roo_transceivers::Universe {
   /// Returns true on success; false if the device is unknown.
   bool getDeviceDescriptor(
       const roo_transceivers::DeviceLocator& locator,
-      roo_transceivers_Descriptor& descriptor) const override;
+      roo_transceivers::Descriptor& descriptor) const override;
 
   /// Reads a sensor measurement.
   ///
@@ -97,18 +97,18 @@ class Hub : public roo_transceivers::Universe {
   void processMessage(const roo_comms::Receiver::Message& received);
 
   void processDiscoveryRequest(const roo_io::MacAddress& origin,
-                               const roo_comms_DeviceDescriptor& descriptor);
+                               const roo::comms::DeviceDescriptor& descriptor);
 
   void processPairingRequest(const roo_io::MacAddress& origin,
-                             const roo_comms_DeviceDescriptor& descriptor);
+                             const roo::comms::DeviceDescriptor& descriptor);
 
   void pair(const roo_io::MacAddress& origin,
-            const roo_comms_DeviceDescriptor& descriptor);
+            const roo::comms::DeviceDescriptor& descriptor);
 
-  bool checkSupportedType(const roo_comms_DeviceDescriptor& descriptor);
+  bool checkSupportedType(const roo::comms::DeviceDescriptor& descriptor);
 
   bool addTransceiver(const roo_io::MacAddress& addr,
-                      const roo_comms_DeviceDescriptor& descriptor);
+                      const roo::comms::DeviceDescriptor& descriptor);
 
   bool removeTransceiver(const roo_io::MacAddress& addr);
 
@@ -139,7 +139,7 @@ class Hub : public roo_transceivers::Universe {
 
   struct PendingPairingRequest {
     enum State { kPending, kApproved };
-    roo_transceivers_Descriptor descriptor;
+    roo_transceivers::Descriptor descriptor;
     State state;
   };
   int32_t next_pairing_request_id_;

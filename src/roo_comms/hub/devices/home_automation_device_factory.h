@@ -7,11 +7,11 @@ namespace roo_comms {
 class HomeAutomationDeviceFactory : public HubDeviceFactory {
  public:
   bool isDeviceSupported(
-      const roo_comms_DeviceDescriptor& descriptor) const override;
+      const roo::comms::DeviceDescriptor& descriptor) const override;
 
   std::unique_ptr<HubDevice> createDevice(
       EspNowTransport& transport, const roo_io::MacAddress& destination,
-      const roo_comms_DeviceDescriptor& descriptor) const override;
+      const roo::comms::DeviceDescriptor& descriptor) const override;
 };
 
 }  // namespace roo_comms

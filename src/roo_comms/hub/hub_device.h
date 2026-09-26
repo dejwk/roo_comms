@@ -23,7 +23,7 @@ class HubDevice {
   virtual ~HubDevice() = default;
 
   /// Returns the device descriptor exposed to the hub.
-  virtual void getDescriptor(roo_transceivers_Descriptor& result) const = 0;
+  virtual void getDescriptor(roo_transceivers::Descriptor& result) const = 0;
 
   /// Reads a sensor value.
   virtual roo_transceivers::Measurement read(

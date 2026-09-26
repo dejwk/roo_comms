@@ -7,16 +7,16 @@ namespace roo_comms {
 /// Parses a payload as a home-automation data message.
 bool TryParsingAsHomeAutomationDataMessage(const uint8_t* incoming_data,
                                            size_t len,
-                                           roo_comms_DataMessage& msg);
+                                           roo::comms::DataMessage& msg);
 
 struct SerializedHomeAutomationDataMessage {
-  pb_byte_t data[8 + roo_comms_DataMessage_size];
+  uint8_t data[8 + roo::comms::DataMessage::kMaxEncodedSize];
   size_t size;
 };
 
 /// Serializes a home-automation data message into a raw buffer.
 SerializedHomeAutomationDataMessage SerializeHomeAutomationDataMessage(
-    const roo_comms_DataMessage& msg);
+    const roo::comms::DataMessage& msg);
 
 /// Requests relay state from a device.
 bool RequestRelayState(EspNowTransport& transport,
@@ -27,12 +27,12 @@ bool WriteRelay(EspNowTransport& transport, const roo_io::MacAddress& device,
                 int relay_idx, bool is_enabled);
 
 /// Builds a generic device descriptor from home-automation specifics.
-roo_comms_DeviceDescriptor BuildHomeAutomationDescriptor(
-    const roo_comms_HomeAutomationDeviceDescriptor& input);
+roo::comms::DeviceDescriptor BuildHomeAutomationDescriptor(
+    const roo::comms::HomeAutomationDeviceDescriptor& input);
 
 /// Parses a home-automation descriptor from a generic descriptor.
 bool TryParseHomeAutomationDescriptor(
-    const roo_comms_DeviceDescriptor& input,
-    roo_comms_HomeAutomationDeviceDescriptor& result);
+    const roo::comms::DeviceDescriptor& input,
+    roo::comms::HomeAutomationDeviceDescriptor& result);
 
 }  // namespace roo_comms

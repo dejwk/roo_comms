@@ -1,0 +1,2 @@
+[fields."roo.comms.DeviceDescriptor.payload"]
+max_bytes = 128

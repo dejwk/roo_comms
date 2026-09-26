@@ -3,8 +3,6 @@
 #include "WiFi.h"
 #include "comms.pb.h"
 #include "esp_now.h"
-#include "pb_decode.h"
-#include "pb_encode.h"
 #include "roo_backport/byte.h"
 #include "roo_collections.h"
 #include "roo_collections/flat_small_hash_map.h"
@@ -25,7 +23,7 @@ namespace roo_comms {
 
 /// Parses a payload as a control message.
 bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
-                                roo_comms_ControlMessage& msg);
+                                roo::comms::ControlMessage& msg);
 
 class EspNowPeer;
 

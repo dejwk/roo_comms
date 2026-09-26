@@ -9,31 +9,34 @@
 namespace roo_comms {
 
 bool HomeAutomationDeviceFactory::isDeviceSupported(
-    const roo_comms_DeviceDescriptor& descriptor) const {
-  return (descriptor.realm_id == roo_comms_RealmId_kHomeAutomation);
+    const roo::comms::DeviceDescriptor& descriptor) const {
+  return (descriptor.realm_id() ==
+          static_cast<int64_t>(roo::comms::RealmId::kHomeAutomation));
 }
 
 std::unique_ptr<HubDevice> HomeAutomationDeviceFactory::createDevice(
     EspNowTransport& transport, const roo_io::MacAddress& destination,
-    const roo_comms_DeviceDescriptor& descriptor) const {
-  if (descriptor.realm_id != roo_comms_RealmId_kHomeAutomation) {
+    const roo::comms::DeviceDescriptor& descriptor) const {
+  if (descriptor.realm_id() !=
+      static_cast<int64_t>(roo::comms::RealmId::kHomeAutomation)) {
     return nullptr;
   }
-  roo_comms_HomeAutomationDeviceDescriptor home_automation_descriptor;
+  roo::comms::HomeAutomationDeviceDescriptor home_automation_descriptor;
   if (!TryParseHomeAutomationDescriptor(descriptor,
                                         home_automation_descriptor)) {
     return nullptr;
   }
-  switch (home_automation_descriptor.which_kind) {
-    case roo_comms_HomeAutomationDeviceDescriptor_environmental_sensor_tag: {
+  switch (home_automation_descriptor.kind_case()) {
+    case roo::comms::HomeAutomationDeviceDescriptor::KindCase::
+        kEnvironmentalSensor: {
       return std::unique_ptr<HubDevice>(new HubDeviceEnvironmentalSensor(
           transport, destination,
-          home_automation_descriptor.kind.environmental_sensor));
+          home_automation_descriptor.environmental_sensor()));
     }
-    case roo_comms_HomeAutomationDeviceDescriptor_relay_tag: {
+    case roo::comms::HomeAutomationDeviceDescriptor::KindCase::kRelay: {
       return std::unique_ptr<HubDevice>(
           new HubDeviceRelay(transport, destination,
-                             home_automation_descriptor.kind.relay.port_count));
+                             home_automation_descriptor.relay().port_count()));
     }
     default: {
       return nullptr;

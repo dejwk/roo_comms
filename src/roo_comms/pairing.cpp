@@ -10,21 +10,21 @@ static constexpr roo_io::byte kControlMagic[8] = {
 namespace {
 
 struct SerializedControlMessage {
-  pb_byte_t data[8 + roo_comms_ControlMessage_size];
+  uint8_t data[8 + roo::comms::ControlMessage::kMaxEncodedSize];
   size_t size;
 };
 
 SerializedControlMessage SerializeControlMessage(
-    const roo_comms_ControlMessage& msg) {
+    const roo::comms::ControlMessage& msg) {
   SerializedControlMessage result;
   memcpy(result.data, kControlMagic, 8);
-  pb_ostream_t stream =
-      pb_ostream_from_buffer(result.data + 8, sizeof(result.data) - 8);
-  bool status = pb_encode(&stream, roo_comms_ControlMessage_fields, &msg);
-  if (status) {
-    result.size = stream.bytes_written + 8;
+  size_t written = 0;
+  auto status =
+      roo_pb::Serialize(msg, result.data + 8, sizeof(result.data) - 8, written);
+  if (status == roo_pb::Status::kOk) {
+    result.size = written + 8;
   } else {
-    LOG(ERROR) << "Encoding failed: " << PB_GET_ERROR(&stream);
+    LOG(ERROR) << "Encoding failed: " << static_cast<int>(status);
     result.size = 0;
   }
   return result;
@@ -33,26 +33,24 @@ SerializedControlMessage SerializeControlMessage(
 }  // namespace
 
 bool TryParsingAsControlMessage(const uint8_t* incoming_data, size_t len,
-                                roo_comms_ControlMessage& msg) {
-  if (memcmp(incoming_data, kControlMagic, 8) != 0) {
+                                roo::comms::ControlMessage& msg) {
+  if (len < 8 || memcmp(incoming_data, kControlMagic, 8) != 0) {
     return false;
   }
-  msg = roo_comms_ControlMessage_init_zero;
-  pb_istream_t stream = pb_istream_from_buffer(incoming_data + 8, len - 8);
-  bool status = pb_decode(&stream, roo_comms_ControlMessage_fields, &msg);
-  if (!status) {
-    LOG(ERROR) << "Received a malformed message: " << PB_GET_ERROR(&stream);
+  auto status = roo_pb::Parse(incoming_data + 8, len - 8, msg);
+  if (status != roo_pb::Status::kOk) {
+    LOG(ERROR) << "Received a malformed message: " << static_cast<int>(status);
     return false;
   }
   return true;
 }
 
 void SendDiscoveryRequest(EspNowTransport& transport,
-                          const roo_comms_DeviceDescriptor& descriptor) {
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_discovery_request_tag;
-  msg.contents.hub_pairing_request.has_device_descriptor = true;
-  msg.contents.hub_discovery_request.device_descriptor = descriptor;
+                          const roo::comms::DeviceDescriptor& descriptor) {
+  roo::comms::ControlMessage msg = {};
+
+  *msg.mutable_hub_discovery_request()->mutable_device_descriptor() =
+      descriptor;
 
   auto serialized = SerializeControlMessage(msg);
   transport.broadcastAsync(serialized.data, serialized.size);
@@ -60,9 +58,9 @@ void SendDiscoveryRequest(EspNowTransport& transport,
 
 void SendDiscoveryResponse(EspNowTransport& transport,
                            const roo_io::MacAddress& origin) {
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_discovery_response_tag;
-  msg.contents.hub_discovery_response.hub_channel = transport.channel();
+  roo::comms::ControlMessage msg = {};
+
+  msg.mutable_hub_discovery_response()->set_hub_channel(transport.channel());
 
   auto serialized = SerializeControlMessage(msg);
   transport.sendOnceAsync(origin, serialized.data, serialized.size);
@@ -71,21 +69,20 @@ void SendDiscoveryResponse(EspNowTransport& transport,
 // Sends a an ack to a pairing request.
 void SendPairingResponse(EspNowTransport& transport,
                          const roo_io::MacAddress& origin) {
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_pairing_response_tag;
-  msg.contents.hub_pairing_response.status =
-      roo_comms_ControlMessage_HubPairingResponse_Status_kOk;
+  roo::comms::ControlMessage msg = {};
+
+  msg.mutable_hub_pairing_response()->set_status(
+      roo::comms::ControlMessage::HubPairingResponse::Status::kOk);
   auto serialized = SerializeControlMessage(msg);
   transport.sendOnceAsync(origin, serialized.data, serialized.size);
 }
 
 void SendPairingRequest(EspNowPeer& peer,
-                        const roo_comms_DeviceDescriptor& descriptor) {
+                        const roo::comms::DeviceDescriptor& descriptor) {
   LOG(INFO) << "Sending pairing request message";
-  roo_comms_ControlMessage msg = roo_comms_ControlMessage_init_zero;
-  msg.which_contents = roo_comms_ControlMessage_hub_pairing_request_tag;
-  msg.contents.hub_pairing_request.has_device_descriptor = true;
-  msg.contents.hub_pairing_request.device_descriptor = descriptor;
+  roo::comms::ControlMessage msg = {};
+
+  *msg.mutable_hub_pairing_request()->mutable_device_descriptor() = descriptor;
   auto result = SerializeControlMessage(msg);
   peer.sendAsync(result.data, result.size);
 }

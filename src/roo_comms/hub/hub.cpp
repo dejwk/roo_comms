@@ -41,7 +41,7 @@ bool ParseMac(const roo_transceivers::DeviceLocator& loc,
 
 void Hub::processDiscoveryRequest(
     const roo_io::MacAddress& origin,
-    const roo_comms_DeviceDescriptor& descriptor) {
+    const roo::comms::DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
   std::unique_ptr<HubDevice> device =
       device_factory_.createDevice(transport_, origin, descriptor);
@@ -49,7 +49,7 @@ void Hub::processDiscoveryRequest(
     LOG(WARNING) << "Factory failed to create device for " << origin;
     return;
   }
-  roo_transceivers_Descriptor generic_descriptor;
+  roo_transceivers::Descriptor generic_descriptor;
   device->getDescriptor(generic_descriptor);
   auto locator = DeviceLocator(origin);
   auto itr = pending_pairings_.find(locator);
@@ -90,8 +90,9 @@ bool Hub::removePairing(const roo_transceivers::DeviceLocator& locator) {
   return removeTransceiver(addr);
 }
 
-void Hub::processPairingRequest(const roo_io::MacAddress& origin,
-                                const roo_comms_DeviceDescriptor& descriptor) {
+void Hub::processPairingRequest(
+    const roo_io::MacAddress& origin,
+    const roo::comms::DeviceDescriptor& descriptor) {
   if (!checkSupportedType(descriptor)) return;
   auto locator = DeviceLocator(origin);
   auto itr = pending_pairings_.find(locator);
@@ -108,7 +109,7 @@ void Hub::processPairingRequest(const roo_io::MacAddress& origin,
     return;
   }
   {
-    roo_transceivers_Descriptor new_descriptor;
+    roo_transceivers::Descriptor new_descriptor;
     device->getDescriptor(new_descriptor);
     if (!(itr->second.descriptor == new_descriptor)) {
       LOG(WARNING) << "Pairing request from " << origin
@@ -122,7 +123,7 @@ void Hub::processPairingRequest(const roo_io::MacAddress& origin,
 }
 
 void Hub::pair(const roo_io::MacAddress& origin,
-               const roo_comms_DeviceDescriptor& descriptor) {
+               const roo::comms::DeviceDescriptor& descriptor) {
   if (!addTransceiver(origin, descriptor)) {
     LOG(WARNING) << "Failed to add transceiver " << origin;
     return;
@@ -132,31 +133,31 @@ void Hub::pair(const roo_io::MacAddress& origin,
   notifyTransceiversChanged();
 }
 
-bool Hub::checkSupportedType(const roo_comms_DeviceDescriptor& descriptor) {
+bool Hub::checkSupportedType(const roo::comms::DeviceDescriptor& descriptor) {
   return device_factory_.isDeviceSupported(descriptor);
 }
 
 void Hub::processMessage(const roo_comms::Receiver::Message& received) {
   {
-    roo_comms_ControlMessage msg;
+    roo::comms::ControlMessage msg;
     if (TryParsingAsControlMessage((const uint8_t*)received.data.get(),
                                    received.size, msg)) {
-      switch (msg.which_contents) {
-        case roo_comms_ControlMessage_hub_discovery_request_tag: {
+      switch (msg.contents_case()) {
+        case roo::comms::ControlMessage::ContentsCase::kHubDiscoveryRequest: {
           processDiscoveryRequest(
-              received.source,
-              msg.contents.hub_discovery_request.device_descriptor);
+              received.source, msg.hub_discovery_request().device_descriptor());
           break;
         }
-        case roo_comms_ControlMessage_hub_pairing_request_tag: {
+        case roo::comms::ControlMessage::ContentsCase::kHubPairingRequest: {
           LOG(INFO) << "Processing pairing request from " << received.source;
-          processPairingRequest(
-              received.source,
-              msg.contents.hub_pairing_request.device_descriptor);
+          processPairingRequest(received.source,
+                                msg.hub_pairing_request().device_descriptor());
           break;
         }
-        case roo_comms_ControlMessage_hub_discovery_response_tag:
-        case roo_comms_ControlMessage_hub_pairing_response_tag: {
+        case roo::comms::ControlMessage::ContentsCase::kNotSet:
+          break;
+        case roo::comms::ControlMessage::ContentsCase::kHubDiscoveryResponse:
+        case roo::comms::ControlMessage::ContentsCase::kHubPairingResponse: {
           LOG(WARNING) << "Unexpected message type; ignoring.";
         }
       }
@@ -236,13 +237,11 @@ void Hub::restoreDevices() {
     roo::byte buf[details_length];
     CHECK_EQ(t.store().readBytes(addr_key, buf, details_length, nullptr),
              roo_prefs::READ_OK);
-    pb_istream_t istream =
-        pb_istream_from_buffer((const pb_byte_t*)buf, details_length);
-    roo_comms_DeviceDescriptor descriptor;
-    bool status =
-        pb_decode(&istream, roo_comms_DeviceDescriptor_fields, &descriptor);
+    roo::comms::DeviceDescriptor descriptor;
+    bool status = descriptor.ParseFromArray(buf, details_length);
     if (!status) {
       LOG(WARNING) << "Ignoring " << addr.asString();
+      continue;
     }
     transceiver_addresses_.push_back(addr);
     std::unique_ptr<HubDevice> device =
@@ -257,7 +256,7 @@ void Hub::restoreDevices() {
 }
 
 bool Hub::addTransceiver(const roo_io::MacAddress& addr,
-                         const roo_comms_DeviceDescriptor& descriptor) {
+                         const roo::comms::DeviceDescriptor& descriptor) {
   std::unique_ptr<HubDevice> device =
       device_factory_.createDevice(transport_, addr, descriptor);
   if (device == nullptr) {
@@ -275,16 +274,15 @@ bool Hub::addTransceiver(const roo_io::MacAddress& addr,
   } else {
     LOG(INFO) << "Overwriting previous registration of " << addr;
   }
-  pb_byte_t buf[roo_comms_DeviceDescriptor_size];
-  pb_ostream_t ostream = pb_ostream_from_buffer(buf, sizeof(buf));
-  CHECK(pb_encode(&ostream, roo_comms_DeviceDescriptor_fields, &descriptor))
-      << PB_GET_ERROR(&ostream);
+  uint8_t buf[roo::comms::DeviceDescriptor::kMaxEncodedSize];
+  size_t written = 0;
+  CHECK(roo_pb::Serialize(descriptor, buf, sizeof(buf), written) ==
+        roo_pb::Status::kOk);
   char addr_key[13];
   snprintf(addr_key, 13, "%012" PRIX64, addr.asU64());
   {
     roo_prefs::Transaction t(store_);
-    CHECK_EQ(t.store().writeBytes(addr_key, buf, ostream.bytes_written),
-             roo_prefs::WRITE_OK);
+    CHECK_EQ(t.store().writeBytes(addr_key, buf, written), roo_prefs::WRITE_OK);
   }
   return true;
 }
@@ -363,7 +361,7 @@ bool Hub::forEachDevice(
 }
 
 bool Hub::getDeviceDescriptor(const roo_transceivers::DeviceLocator& locator,
-                              roo_transceivers_Descriptor& descriptor) const {
+                              roo_transceivers::Descriptor& descriptor) const {
   roo_io::MacAddress addr;
   if (!ParseMac(locator, addr)) return false;
   HubDevice* device = lookupDevice(addr);

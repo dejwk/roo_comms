@@ -11,10 +11,10 @@ class HubDeviceEnvironmentalSensor : public HubDevice {
  public:
   HubDeviceEnvironmentalSensor(
       EspNowTransport& transport, const roo_io::MacAddress& destination,
-      const roo_comms_HomeAutomationDeviceDescriptor_EnvironmentalSensor&
+      const roo::comms::HomeAutomationDeviceDescriptor_EnvironmentalSensor&
           descriptor);
 
-  void getDescriptor(roo_transceivers_Descriptor& result) const override;
+  void getDescriptor(roo_transceivers::Descriptor& result) const override;
 
   roo_transceivers::Measurement read(
       const roo_transceivers::SensorId& sensor_id) const override;
@@ -22,8 +22,8 @@ class HubDeviceEnvironmentalSensor : public HubDevice {
   void updateState(const uint8_t* data, size_t len) override;
 
  private:
-  roo_comms_HomeAutomationDeviceDescriptor_EnvironmentalSensor descriptor_;
-  roo_comms_DataMessage_EnvironmentalSensorReadings state_;
+  roo::comms::HomeAutomationDeviceDescriptor_EnvironmentalSensor descriptor_;
+  roo::comms::DataMessage_EnvironmentalSensorReadings state_;
   roo_time::Uptime last_reading_;
 };
 

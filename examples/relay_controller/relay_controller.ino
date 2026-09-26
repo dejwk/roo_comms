@@ -35,25 +35,26 @@ class FakeRelayDevice : public FakeEspNowDevice {
   FakeRelayDevice() : FakeEspNowDevice(0x020000000002ULL) {}
 
   void send(const void* data, size_t len) override {
-    roo_comms_DataMessage request;
+    roo::comms::DataMessage request;
     if (len < kProtocolPrefixSize ||
         !roo_comms::TryParsingAsHomeAutomationDataMessage(
             static_cast<const uint8_t*>(data), len, request) ||
-        request.which_contents != roo_comms_DataMessage_relay_request_tag) {
+        request.contents_case() !=
+            roo::comms::DataMessage::ContentsCase::kRelayRequest) {
       Serial.println("[emulator relay] Ignoring an invalid relay request");
       return;
     }
 
-    const uint32_t mask = request.contents.relay_request.mask;
-    const uint32_t write = request.contents.relay_request.write;
+    const uint32_t mask = request.relay_request().mask();
+    const uint32_t write = request.relay_request().write();
     state_ = (state_ & ~mask) | (write & mask);
 
     Serial.printf("[emulator relay] State is now 0x%08lX\n",
                   static_cast<unsigned long>(state_));
 
-    roo_comms_DataMessage response = roo_comms_DataMessage_init_zero;
-    response.which_contents = roo_comms_DataMessage_relay_response_tag;
-    response.contents.relay_response.state = state_;
+    roo::comms::DataMessage response = {};
+
+    response.mutable_relay_response()->set_state(state_);
     auto serialized = roo_comms::SerializeHomeAutomationDataMessage(response);
     if (serialized.size > 0) {
       respond(serialized.data, serialized.size);
@@ -76,23 +77,23 @@ struct Emulator {
 
 void OnMessageReceived(const roo_comms::Source& source, const void* data,
                        size_t len) {
-  roo_comms_DataMessage response;
+  roo::comms::DataMessage response;
   if (len < kProtocolPrefixSize ||
       !roo_comms::TryParsingAsHomeAutomationDataMessage(
           static_cast<const uint8_t*>(data), len, response)) {
     Serial.println("Controller: received an invalid roo_comms message");
     return;
   }
-  if (response.which_contents != roo_comms_DataMessage_relay_response_tag) {
+  if (response.contents_case() !=
+      roo::comms::DataMessage::ContentsCase::kRelayResponse) {
     Serial.println(
         "Controller: received a message that is not a relay response");
     return;
   }
 
   const std::string address = source.addr.asString();
-  Serial.printf(
-      "Controller: relay %s reports state 0x%08lX\n", address.c_str(),
-      static_cast<unsigned long>(response.contents.relay_response.state));
+  Serial.printf("Controller: relay %s reports state 0x%08lX\n", address.c_str(),
+                static_cast<unsigned long>(response.relay_response().state()));
 }
 
 }  // namespace

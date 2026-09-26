@@ -80,7 +80,7 @@ class PairableDevice {
   };
 
   PairableDevice(
-      const roo_comms_DeviceDescriptor* device_descriptor,
+      const roo::comms::DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
@@ -90,7 +90,7 @@ class PairableDevice {
   // For testing.
   PairableDevice(
       EspNowTransport& transport,
-      const roo_comms_DeviceDescriptor* device_descriptor,
+      const roo::comms::DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
       StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
@@ -136,7 +136,7 @@ class PairableDevice {
 
   EspNowTransport& transport_;
 
-  const roo_comms_DeviceDescriptor* device_descriptor_;
+  const roo::comms::DeviceDescriptor* device_descriptor_;
 
   roo_prefs::Collection& prefs_;
   StateSignaler& signaler_;

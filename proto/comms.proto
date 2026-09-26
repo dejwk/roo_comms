@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "nanopb.proto";
-
 package roo.comms;
 
 enum RealmId {
@@ -13,7 +11,7 @@ enum RealmId {
 
 message DeviceDescriptor {
   int64 realm_id = 1;
-  bytes payload = 2 [ (nanopb).max_size = 128 ];
+  bytes payload = 2;
 }
 
 message HomeAutomationDeviceDescriptor {

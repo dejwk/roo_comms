@@ -53,7 +53,7 @@ void MonochromeLedSignaler::signalPairing() {
 }
 
 PairableDevice::PairableDevice(
-    const roo_comms_DeviceDescriptor* device_descriptor,
+    const roo::comms::DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
@@ -64,7 +64,7 @@ PairableDevice::PairableDevice(
 
 PairableDevice::PairableDevice(
     EspNowTransport& transport,
-    const roo_comms_DeviceDescriptor* device_descriptor,
+    const roo::comms::DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
     StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
@@ -225,16 +225,16 @@ void PairableDevice::sendPairingRequestMessage() {
 
 void PairableDevice::processMessage(const roo_comms::Receiver::Message& msg) {
   {
-    roo_comms_ControlMessage control_msg;
+    roo::comms::ControlMessage control_msg;
     if (TryParsingAsControlMessage((const uint8_t*)msg.data.get(), msg.size,
                                    control_msg)) {
-      switch (control_msg.which_contents) {
-        case roo_comms_ControlMessage_hub_discovery_response_tag: {
+      switch (control_msg.contents_case()) {
+        case roo::comms::ControlMessage::ContentsCase::kHubDiscoveryResponse: {
           if (state_ != kPairing) {
             LOG(ERROR) << "Received pairing invitation, but we're not asking.";
             break;
           }
-          int channel = control_msg.contents.hub_discovery_response.hub_channel;
+          int channel = control_msg.hub_discovery_response().hub_channel();
           LOG(INFO) << "Received broadcast announce response with channel "
                     << channel;
           transport_.setChannel(channel);
@@ -243,7 +243,7 @@ void PairableDevice::processMessage(const roo_comms::Receiver::Message& msg) {
           setState(kAwaitingPairingConfirmation);
           break;
         }
-        case roo_comms_ControlMessage_hub_pairing_response_tag: {
+        case roo::comms::ControlMessage::ContentsCase::kHubPairingResponse: {
           // TODO: verify that this came with the hub we asked.
           if (state_ != kAwaitingPairingConfirmation) {
             LOG(ERROR)
@@ -254,8 +254,8 @@ void PairableDevice::processMessage(const roo_comms::Receiver::Message& msg) {
           setState(kPaired);
           break;
         }
-        case roo_comms_ControlMessage_hub_discovery_request_tag:
-        case roo_comms_ControlMessage_hub_pairing_request_tag:
+        case roo::comms::ControlMessage::ContentsCase::kHubDiscoveryRequest:
+        case roo::comms::ControlMessage::ContentsCase::kHubPairingRequest:
         default: {
           // Ignoring.
           return;

@@ -14,14 +14,17 @@ HubDeviceRelay::HubDeviceRelay(EspNowTransport& transport,
       state_(0),
       last_reading_(roo_time::Uptime::Start()) {}
 
-void HubDeviceRelay::getDescriptor(roo_transceivers_Descriptor& result) const {
-  result.actuators_count = relay_count_;
-  result.sensors_count = relay_count_;
+void HubDeviceRelay::getDescriptor(roo_transceivers::Descriptor& result) const {
+  result.Clear();
   for (size_t i = 0; i < relay_count_; ++i) {
-    snprintf(result.sensors[i].id, 24, "relay_%zu", i + 1);
-    result.sensors[i].quantity = roo_transceivers_Quantity_kBinaryState;
-    snprintf(result.actuators[i].id, 24, "relay_%zu", i + 1);
-    result.actuators[i].quantity = roo_transceivers_Quantity_kBinaryState;
+    char id[32];
+    snprintf(id, sizeof(id), "relay_%zu", i + 1);
+    auto* sensor = result.add_sensors();
+    sensor->set_id(id);
+    sensor->set_quantity(roo_transceivers::Quantity::kBinaryState);
+    auto* actuator = result.add_actuators();
+    actuator->set_id(id);
+    actuator->set_quantity(roo_transceivers::Quantity::kBinaryState);
   }
 }
 
@@ -42,7 +45,7 @@ roo_transceivers::Measurement HubDeviceRelay::read(
   int d = extractRelayId(sensor_id.c_str());
   if (d >= 0) {
     return roo_transceivers::Measurement(
-        roo_transceivers_Quantity_kBinaryState, last_reading_,
+        roo_transceivers::Quantity::kBinaryState, last_reading_,
         last_reading_ > roo_time::Uptime::Start()
             ? ((state_ & (1 << d)) == 0 ? 0.0f : 1.0f)
             : nanf(""));
@@ -69,16 +72,17 @@ void HubDeviceRelay::requestUpdate() const {
 }
 
 void HubDeviceRelay::updateState(const uint8_t* data, size_t len) {
-  roo_comms_DataMessage data_message;
+  roo::comms::DataMessage data_message;
   if (!TryParsingAsHomeAutomationDataMessage(data, len, data_message)) {
     LOG(WARNING) << "Failed to parse data message";
     return;
   }
-  if (data_message.which_contents != roo_comms_DataMessage_relay_response_tag) {
+  if (data_message.contents_case() !=
+      roo::comms::DataMessage::ContentsCase::kRelayResponse) {
     LOG(WARNING) << "Ignoring non-relay response message";
     return;
   }
-  state_ = data_message.contents.relay_response.state;
+  state_ = data_message.relay_response().state();
   last_reading_ = roo_time::Uptime::Now();
 }
 
