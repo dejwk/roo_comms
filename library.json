@@ -26,15 +26,15 @@
     ],
     "dependencies": {
         "dejwk/roo_pb": ">=0.1.0",
-        "dejwk/roo_blink": ">=1.1.0",
-        "dejwk/roo_collections": ">=1.4.7",
-        "dejwk/roo_control": ">=1.2.7",
+        "dejwk/roo_blink": ">=1.1.1",
+        "dejwk/roo_collections": ">=1.4.8",
+        "dejwk/roo_control": ">=1.2.8",
         "dejwk/roo_io": ">=2.4.0",
-        "dejwk/roo_logging": ">=1.5.10",
-        "dejwk/roo_prefs": ">=1.3.2",
-        "dejwk/roo_scheduler": ">=2.2.0",
-        "dejwk/roo_threads": ">=1.2.8",
-        "dejwk/roo_time": ">=2.0.0",
+        "dejwk/roo_logging": ">=1.5.11",
+        "dejwk/roo_prefs": ">=2.0.2",
+        "dejwk/roo_scheduler": ">=2.2.1",
+        "dejwk/roo_threads": ">=1.2.9",
+        "dejwk/roo_time": ">=2.0.1",
         "dejwk/roo_transceivers": ">=1.3.0"
     }
 }
