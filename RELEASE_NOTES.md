@@ -1,3 +1,13 @@
+# roo_comms 1.2.0
+
+- **Breaking API change:** Replace nanopb with `roo_pb` 0.1.0. Messages now use `roo::comms` types with getters, setters, and mutable submessages; C++17 is required. Existing devices and stored pairings remain wire compatible.
+- Reject packets shorter than the protocol prefix and skip malformed stored device descriptors during hub restoration.
+- Upgrade dependencies, including `roo_io` 2.4.0, `roo_prefs` 2.0.2, `roo_transceivers` 1.3.0, and `roo_testing` 2.3.0.
+- Add protocol regression tests covering wire compatibility, sensor field presence, descriptor limits, and malformed packets; enable tests in CI.
+- Update relay examples and document API migration and protobuf regeneration.
+
+---
+
 # roo_comms 1.1.6
 
 - Upgrade Bazel and PlatformIO dependencies, including roo_time 2.0.0, roo_io 2.3.0, roo_scheduler 2.2.0, roo_transceivers 1.2.0, and roo_blink 1.1.0.
