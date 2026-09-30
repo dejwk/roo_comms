@@ -24,7 +24,7 @@ class Receiver {
   using ValidatorFn = std::function<bool(const roo_io::byte* data, size_t len)>;
 
   /// Creates a receiver with validation and queue limits.
-  Receiver(roo_scheduler::Scheduler& scheduler, ProcessorFn processor_fn,
+  Receiver(roo_scheduler::SchedulerClient& scheduler, ProcessorFn processor_fn,
            size_t max_queue_size, size_t min_msg_size, size_t max_msg_size,
            ValidatorFn validator_fn);
 

@@ -3,14 +3,14 @@
 namespace roo_comms {
 
 Button::Button(roo_control::BinarySelector& selector,
-               roo_scheduler::Scheduler& scheduler,
+               roo_scheduler::SchedulerClient& scheduler,
                std::function<void(bool)> pressed)
     : roo_control::PushButton(selector),
       updater_(scheduler, roo_time::Millis(10), [this]() { tick(); }),
       pressed_(pressed) {}
 
 RgbLedSignaler::RgbLedSignaler(roo_blink::RgbLed& led,
-                               roo_scheduler::Scheduler& scheduler)
+                               roo_scheduler::SchedulerClient& scheduler)
     : led_(led), blinker_(led, scheduler) {}
 
 void RgbLedSignaler::turnOff() { blinker_.turnOff(); }
@@ -31,7 +31,7 @@ void RgbLedSignaler::signalPairing() {
 }
 
 MonochromeLedSignaler::MonochromeLedSignaler(
-    roo_blink::Led& led, roo_scheduler::Scheduler& scheduler,
+    roo_blink::Led& led, roo_scheduler::SchedulerClient& scheduler,
     uint16_t normal_mode_intensity)
     : led_(led),
       blinker_(led, scheduler),
@@ -55,7 +55,7 @@ void MonochromeLedSignaler::signalPairing() {
 PairableDevice::PairableDevice(
     const roo::comms::DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
-    StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+    StateSignaler& signaler, roo_scheduler::SchedulerClient& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
     std::function<void(const roo_comms::Receiver::Message&)> on_app_data_recv)
     : PairableDevice(Transport(), device_descriptor, prefs, button, signaler,
@@ -66,7 +66,7 @@ PairableDevice::PairableDevice(
     EspNowTransport& transport,
     const roo::comms::DeviceDescriptor* device_descriptor,
     roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
-    StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+    StateSignaler& signaler, roo_scheduler::SchedulerClient& scheduler,
     std::function<void(State prev_state, State new_state)> on_state_changed,
     std::function<void(const roo_comms::Receiver::Message&)> on_app_data_recv)
     : transport_(transport),

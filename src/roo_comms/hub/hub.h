@@ -22,12 +22,12 @@ class Hub : public roo_transceivers::Universe {
   using PairingConfirmedCb =
       std::function<void(const roo_transceivers::DeviceLocator&)>;
 
-  Hub(roo_scheduler::Scheduler& scheduler, HubDeviceFactory& device_factory,
-      PairingRequestCb pairing_request_cb,
+  Hub(roo_scheduler::SchedulerClient& scheduler,
+      HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
       PairingConfirmedCb pairing_confirmed_cb);
 
   // For testing.
-  Hub(EspNowTransport& transport, roo_scheduler::Scheduler& scheduler,
+  Hub(EspNowTransport& transport, roo_scheduler::SchedulerClient& scheduler,
       HubDeviceFactory& device_factory, PairingRequestCb pairing_request_cb,
       PairingConfirmedCb pairing_confirmed_cb);
 

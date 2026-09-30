@@ -31,7 +31,7 @@ namespace roo_comms {
 class Button : public roo_control::PushButton {
  public:
   Button(roo_control::BinarySelector& selector,
-         roo_scheduler::Scheduler& scheduler,
+         roo_scheduler::SchedulerClient& scheduler,
          std::function<void(bool is_long_pressed)> pressed);
 
   /// Starts periodic polling of the button.
@@ -82,7 +82,7 @@ class PairableDevice {
   PairableDevice(
       const roo::comms::DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
-      StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+      StateSignaler& signaler, roo_scheduler::SchedulerClient& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
       std::function<void(const roo_comms::Receiver::Message&)>
           on_app_data_recv);
@@ -92,7 +92,7 @@ class PairableDevice {
       EspNowTransport& transport,
       const roo::comms::DeviceDescriptor* device_descriptor,
       roo_prefs::Collection& prefs, roo_control::BinarySelector& button,
-      StateSignaler& signaler, roo_scheduler::Scheduler& scheduler,
+      StateSignaler& signaler, roo_scheduler::SchedulerClient& scheduler,
       std::function<void(State prev_state, State new_state)> on_state_changed,
       std::function<void(const roo_comms::Receiver::Message&)>
           on_app_data_recv);
@@ -162,7 +162,8 @@ class PairableDevice {
 /// RGB LED-based signaler for pairing state.
 class RgbLedSignaler : public PairableDevice::StateSignaler {
  public:
-  RgbLedSignaler(roo_blink::RgbLed& led, roo_scheduler::Scheduler& scheduler);
+  RgbLedSignaler(roo_blink::RgbLed& led,
+                 roo_scheduler::SchedulerClient& scheduler);
 
   void turnOff() override;
 
@@ -181,7 +182,7 @@ class RgbLedSignaler : public PairableDevice::StateSignaler {
 class MonochromeLedSignaler : public PairableDevice::StateSignaler {
  public:
   MonochromeLedSignaler(roo_blink::Led& led,
-                        roo_scheduler::Scheduler& scheduler,
+                        roo_scheduler::SchedulerClient& scheduler,
                         uint16_t normal_mode_intensity = 0);
 
   void turnOff() override;

@@ -8,7 +8,7 @@
 
 namespace roo_comms {
 
-Receiver::Receiver(roo_scheduler::Scheduler& scheduler,
+Receiver::Receiver(roo_scheduler::SchedulerClient& scheduler,
                    ProcessorFn processor_fn, size_t max_queue_size,
                    size_t min_msg_size, size_t max_msg_size,
                    ValidatorFn validator_fn)
@@ -46,9 +46,8 @@ void Receiver::handle(const Source& source, const void* incoming_data,
   }
   std::unique_ptr<roo_io::byte[]> data(new roo::byte[len]);
   memcpy(data.get(), incoming_data, len);
-  queue_.push(Message{.source = source.addr,
-                      .size = len,
-                      .data = std::move(data)});
+  queue_.push(
+      Message{.source = source.addr, .size = len, .data = std::move(data)});
 }
 
 void Receiver::processMessages() {
