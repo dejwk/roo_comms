@@ -1,3 +1,10 @@
+# roo_comms 1.2.1
+
+- Update hub, receiver, pairable device, button, and LED signaler constructors to accept `roo_scheduler::SchedulerClient&` instead of `Scheduler&`.
+- Upgrade Bazel and PlatformIO dependencies to `roo_scheduler` 2.3.0, `roo_blink` 1.2.0, `roo_control` 1.2.9, and `roo_prefs` 2.0.3.
+
+---
+
 # roo_comms 1.2.0
 
 - **Breaking API change:** Replace nanopb with `roo_pb` 0.1.0. Messages now use `roo::comms` types with getters, setters, and mutable submessages; C++17 is required. Existing devices and stored pairings remain wire compatible.
