@@ -31,7 +31,7 @@ follow their canonical-source headers when refreshing them.
 
 ## Protocol buffers
 
-Messages use `roo_pb` 0.1.0 and require C++17 and `roo_io` 2.4.0 or newer.
+Messages use `roo_pb` 0.2.0 and require C++17 and `roo_io` 2.4.0 or newer.
 Hub adapters use the `roo_pb` descriptor API from `roo_transceivers` 1.3.0.
 The generated `src/comms.pb.h` is checked in for Arduino and PlatformIO builds.
 Regenerate it from any working directory with:

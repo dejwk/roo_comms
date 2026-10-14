@@ -1,3 +1,11 @@
+# Unreleased
+
+- Require roo_pb 0.2.0 and use length-aware string views for protobuf fields.
+  Wire encoding and payload capacities remain unchanged. Rebuild consumers for
+  the updated protobuf storage layout.
+
+---
+
 # roo_comms 1.2.1
 
 - Update hub, receiver, pairable device, button, and LED signaler constructors to accept `roo_scheduler::SchedulerClient&` instead of `Scheduler&`.

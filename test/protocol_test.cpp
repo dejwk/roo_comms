@@ -129,8 +129,8 @@ TEST(Protocol, HubDescriptorsUseRooPbAndReplaceExistingContents) {
   relay.getDescriptor(descriptor);
   ASSERT_EQ(descriptor.sensors_size(), 2u);
   ASSERT_EQ(descriptor.actuators_size(), 2u);
-  EXPECT_STREQ(descriptor.sensors(0).id().c_str(), "relay_1");
-  EXPECT_STREQ(descriptor.actuators(1).id().c_str(), "relay_2");
+  EXPECT_EQ(descriptor.sensors(0).id().view(), roo::string_view("relay_1"));
+  EXPECT_EQ(descriptor.actuators(1).id().view(), roo::string_view("relay_2"));
   EXPECT_EQ(descriptor.sensors(0).quantity(),
             roo_transceivers::Quantity::kBinaryState);
   HomeAutomationDeviceDescriptor::EnvironmentalSensor sensor_descriptor;
@@ -140,8 +140,10 @@ TEST(Protocol, HubDescriptorsUseRooPbAndReplaceExistingContents) {
   sensor.getDescriptor(descriptor);
   ASSERT_EQ(descriptor.sensors_size(), 4u);
   EXPECT_EQ(descriptor.actuators_size(), 0u);
-  EXPECT_STREQ(descriptor.sensors(0).id().c_str(), "aht20_temperature");
-  EXPECT_STREQ(descriptor.sensors(3).id().c_str(), "bmp280_pressure");
+  EXPECT_EQ(descriptor.sensors(0).id().view(),
+            roo::string_view("aht20_temperature"));
+  EXPECT_EQ(descriptor.sensors(3).id().view(),
+            roo::string_view("bmp280_pressure"));
   EXPECT_EQ(descriptor.sensors(3).quantity(),
             roo_transceivers::Quantity::kPressure);
   sensor.getDescriptor(descriptor);
