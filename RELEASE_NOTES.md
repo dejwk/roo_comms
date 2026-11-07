@@ -8,7 +8,7 @@
 
 # roo_comms 1.2.1
 
-- Update hub, receiver, pairable device, button, and LED signaler constructors to accept `roo_scheduler::SchedulerClient&` instead of `Scheduler&`.
+- Update hub, receiver, pairable device, button, and LED signaler constructors to accept the restricted `roo_scheduler::Scheduler&` interface.
 - Upgrade Bazel and PlatformIO dependencies to `roo_scheduler` 2.3.0, `roo_blink` 1.2.0, `roo_control` 1.2.9, and `roo_prefs` 2.0.3.
 
 ---

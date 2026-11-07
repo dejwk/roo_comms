@@ -8,7 +8,7 @@
 
 namespace roo_comms {
 
-Receiver::Receiver(roo_scheduler::SchedulerClient& scheduler,
+Receiver::Receiver(roo_scheduler::Scheduler& scheduler,
                    ProcessorFn processor_fn, size_t max_queue_size,
                    size_t min_msg_size, size_t max_msg_size,
                    ValidatorFn validator_fn)
