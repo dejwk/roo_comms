@@ -1,6 +1,7 @@
 #include "roo_comms/hub/hub.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "roo_backport.h"
 #include "roo_backport/byte.h"
@@ -30,8 +31,12 @@ bool ParseMac(const roo_transceivers::DeviceLocator& loc,
     LOG(WARNING) << "Wrong schema";
     return false;
   }
-  if (!result.parseFrom(loc.device_id().c_str())) {
-    LOG(WARNING) << "Failed to parse " << loc.device_id().c_str();
+  const roo::string_view id = loc.device_id().view();
+  char address[roo_transceivers::DeviceId::kCapacity];
+  std::memcpy(address, id.data(), id.size());
+  address[id.size()] = '\0';
+  if (!result.parseFrom(address)) {
+    LOG(WARNING) << "Failed to parse " << id;
     return false;
   }
   return true;

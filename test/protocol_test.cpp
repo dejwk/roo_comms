@@ -150,6 +150,19 @@ TEST(Protocol, HubDescriptorsUseRooPbAndReplaceExistingContents) {
   EXPECT_EQ(descriptor.sensors_size(), 4u);
 }
 
+// Verifies that a zero byte after a valid relay ID does not hide extra bytes.
+TEST(Protocol, RelayIdsUseTheFullView) {
+  EspNowTransport transport;
+  roo_io::MacAddress address(0x02, 0, 0, 0, 0, 1);
+  HubDeviceRelay relay(transport, address, 2);
+  EXPECT_EQ(relay.read(roo_transceivers::SensorId("relay_1")).quantity(),
+            roo_transceivers::Quantity::kBinaryState);
+  const roo::string_view id_with_zero("relay_1\0x", 9);
+  EXPECT_EQ(relay.read(roo_transceivers::SensorId(id_with_zero)).quantity(),
+            roo_transceivers::Quantity::kUnspecifiedQuantity);
+  EXPECT_FALSE(relay.write(roo_transceivers::ActuatorId(id_with_zero), 1.0f));
+}
+
 TEST(Protocol, RejectsShortWrongAndMalformedPackets) {
   DataMessage data;
   ControlMessage control;

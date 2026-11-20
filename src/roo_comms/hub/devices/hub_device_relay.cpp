@@ -1,6 +1,6 @@
 #include "roo_comms/hub/devices/hub_device_relay.h"
 
-#include <cstring>
+#include <cstdio>
 
 #include "roo_comms/home_automation.h"
 
@@ -18,7 +18,7 @@ void HubDeviceRelay::getDescriptor(roo_transceivers::Descriptor& result) const {
   result.Clear();
   for (size_t i = 0; i < relay_count_; ++i) {
     char id[32];
-    snprintf(id, sizeof(id), "relay_%zu", i + 1);
+    std::snprintf(id, sizeof(id), "relay_%zu", i + 1);
     auto* sensor = result.add_sensors();
     sensor->set_id(id);
     sensor->set_quantity(roo_transceivers::Quantity::kBinaryState);
@@ -30,10 +30,10 @@ void HubDeviceRelay::getDescriptor(roo_transceivers::Descriptor& result) const {
 
 namespace {
 
-int extractRelayId(const char* actuator_id) {
-  if (strlen(actuator_id) == 7 && strncmp(actuator_id, "relay_", 6) == 0 &&
-      actuator_id[6] >= '1' && actuator_id[6] <= '8') {
-    return actuator_id[6] - '1';
+int ExtractRelayId(roo::string_view id) {
+  if (id.size() == 7 && id.substr(0, 6) == "relay_" && id[6] >= '1' &&
+      id[6] <= '8') {
+    return id[6] - '1';
   }
   return -1;
 }
@@ -42,7 +42,7 @@ int extractRelayId(const char* actuator_id) {
 
 roo_transceivers::Measurement HubDeviceRelay::read(
     const roo_transceivers::SensorId& sensor_id) const {
-  int d = extractRelayId(sensor_id.c_str());
+  int d = ExtractRelayId(sensor_id.view());
   if (d >= 0) {
     return roo_transceivers::Measurement(
         roo_transceivers::Quantity::kBinaryState, last_reading_,
@@ -59,11 +59,11 @@ bool HubDeviceRelay::write(const roo_transceivers::ActuatorId& actuator_id,
     LOG(WARNING) << "Received bogus write value " << value;
     return false;
   }
-  int d = extractRelayId(actuator_id.c_str());
+  int d = ExtractRelayId(actuator_id.view());
   if (d >= 0) {
     return WriteRelay(transport(), destination(), d, value == 1.0f);
   }
-  LOG(WARNING) << "Received bogus relay ID " << actuator_id.c_str();
+  LOG(WARNING) << "Received bogus relay ID " << actuator_id.view();
   return false;
 }
 
