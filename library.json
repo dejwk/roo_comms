@@ -25,9 +25,9 @@
         "examples/**/*.ino"
     ],
     "dependencies": {
-        "dejwk/roo_pb": ">=0.1.1",
+        "dejwk/roo_pb": ">=0.2.0",
         "dejwk/roo_blink": ">=1.2.0",
-        "dejwk/roo_collections": ">=1.4.8",
+        "dejwk/roo_collections": ">=2.0.1",
         "dejwk/roo_control": ">=1.2.10",
         "dejwk/roo_io": ">=2.4.1",
         "dejwk/roo_logging": ">=1.5.11",
