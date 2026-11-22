@@ -3,6 +3,7 @@
 #include <queue>
 
 #include "roo_scheduler.h"
+#include "roo_threads.h"
 #include "roo_threads/mutex.h"
 
 namespace roo_comms {

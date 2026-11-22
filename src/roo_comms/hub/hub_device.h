@@ -3,8 +3,10 @@
 
 #include "roo_comms.h"
 #include "roo_comms/transport/esp_now_transport.h"
+#include "roo_io.h"
 #include "roo_io/net/mac_address.h"
 #include "roo_transceivers.pb.h"
+#include "roo_transceivers.h"
 #include "roo_transceivers/id.h"
 #include "roo_transceivers/measurement.h"
 

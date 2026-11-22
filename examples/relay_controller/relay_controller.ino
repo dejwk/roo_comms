@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "roo_comms.h"
 #include "roo_comms/home_automation.h"
+#include "roo_io.h"
 #include "roo_io/net/mac_address.h"
 
 #ifdef ROO_TESTING

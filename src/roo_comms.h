@@ -7,6 +7,7 @@
 #include <functional>
 
 #include "comms.pb.h"
+#include "roo_io.h"
 #include "roo_io/net/mac_address.h"
 
 namespace roo_comms {

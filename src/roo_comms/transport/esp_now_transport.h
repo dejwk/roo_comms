@@ -3,6 +3,7 @@
 #include "WiFi.h"
 #include "comms.pb.h"
 #include "esp_now.h"
+#include "roo_backport.h"
 #include "roo_backport/byte.h"
 #include "roo_collections.h"
 #include "roo_collections/flat_small_hash_map.h"
