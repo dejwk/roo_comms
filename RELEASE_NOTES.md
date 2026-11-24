@@ -1,8 +1,11 @@
-# Unreleased
+# roo_comms 1.3.0
 
-- Require roo_pb 0.2.0 and use length-aware string views for protobuf fields.
-  Wire encoding and payload capacities remain unchanged. Rebuild consumers for
-  the updated protobuf storage layout.
+- Require `roo_pb` 1.0.0, use length-aware string views for protobuf fields, and add `DebugString()` to generated messages. Rebuild consumers for the new storage layout. Wire encoding and payload capacities are preserved.
+- Validate relay sensor and actuator IDs over their full length, rejecting IDs with extra bytes after a NUL.
+- Require `roo_scheduler` 2.4.0 and adopt the `SchedulerClient` to `Scheduler` rename in hub, receiver, pairable device, button, and LED signaler constructors.
+- Fix Arduino dependency discovery for nested headers in the library and relay controller example.
+- Update Bazel and PlatformIO dependencies to `roo_blink` 1.3.0, `roo_collections` 2.0.2, `roo_control` 1.3.0, `roo_io` 2.5.0, `roo_logging` 1.6.1, `roo_prefs` 2.0.4, `roo_threads` 1.4.0, `roo_time` 2.2.1, and `roo_transceivers` 1.4.0.
+- Update `roo_testing` to 2.7.1 in Bazel and 2.7.0 in CI. Add local Bazel profile definitions for ESP32-C3, ESP32-S3, and RP2040, and expand the local test runner’s profile list from two to nine.
 
 ---
 
